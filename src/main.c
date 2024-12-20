@@ -4,10 +4,15 @@
 #include "stdio.h"
 #include "math.h"
 #include "stdlib.h"
+#include "string.h"
 
 #ifndef WIN32
 #include "sys/fcntl.h"
 #include "unistd.h"
+#define sleep_millis(count) usleep(count * 1000)
+#else
+// #include "windows.h"
+#define sleep_millis(count) WaitTime((double)count * 0.001)
 #endif
 
 #include "raylib.h"
@@ -288,20 +293,24 @@ int main() {
 
     // halt at the end of each frame when operating in frame-by-frame mode
     // also only works with POSIX APIs
-    #ifndef WIN32
+    // #ifndef WIN32
     if (frame_mode) {
+      printf("INFO: press p then Enter into terminal to unpause\n");
 
       while (1) {
-        char buf = 0x0;
-        ssize_t read_size = read(fileno(stdin), &buf, 1);
-        if (read_size != -1 && read_size != 0) {
-          if (buf == 'p') { frame_mode = false; }
+        // char buf = 0x0;
+        char buffer[128];
+        // ssize_t read_size = read(fileno(stdin), &buf, 1);
+        char *result = fgets(buffer, 128, stdin);
+        if (result != NULL) {
+          if (!strcmp(buffer, "p\n")) { frame_mode = false; }
           break;
         }
-        usleep(1000);
+        sleep_millis(1);
+        // usleep(1000);
       }
     }
-    #endif
+    // #endif
   }
 
   CloseWindow();
