@@ -1,0 +1,10 @@
+
+
+flark
+flark_w32
+flark_w32.pdb
+
+*.obj
+raylib/
+
+

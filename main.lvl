@@ -1,0 +1,40 @@
+Platform:x300;y-100;w50;h200;cblue;tbouncy;
+
+// specify a platform with "Platform:"
+// each argument must end with a semicolon ";"
+// no spaces allowed (for now)
+// platforms default to x = 0, y = 0, width = 10, height = 10, color = white, platform type = bouyant
+
+// x = -500
+// y = -10
+// width = 300
+// pixel red = 128
+// pixel alpha = 255
+// platform type = bouncy
+Platform:x-500;y-10;w300;r128;a255;tbouncy;
+
+// more examples
+Platform:x-800;y-100;w300;r128;a255;tbouncy;
+Platform:x-300;y-310;w100;tbouyant;
+
+// platforms from previous demo now in .lvl file
+Platform:x0;y40;w200;h5;cblue;tbouyant;
+Platform:x300;y60;w100;h3;cgreen;tsolid;
+Platform:x-100;y100;w1000;h1;cmagenta;tsolid;
+Platform:x800;y-10;w400;h1;corange;tsolid;
+Platform:x80;y-65;w30;h30;r0;g255;b128;a255;tbouncy;
+Platform:x900;y-110;w100;h10;cyellow;tbouncy;
+Platform:x700;y-300;w150;h10;cpink;tsolid;
+Platform:x300;y-100;w250;h5;corange;tsolid;
+Platform:x500;y-500;w50;h3;cgreen;tsolid;
+Platform:x300;y-350;w30;h10;cgray;tsolid;
+
+// specify home coords
+Home:x400;y-500;
+
+// specify background color
+//         red green blue alpha
+Background:r16;g16;b16;a255;
+
+
+
