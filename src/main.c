@@ -19,7 +19,7 @@
 typedef struct {
   Rectangle body;
   Vector2 velocity;
-  bool is_grounded;
+  bool can_jump;
 } Player;
 
 void Player_apply_gravity(Player *self, float strength, float terminal_velocity) {
@@ -39,8 +39,8 @@ void Player_move(Player *self) {
   self->body.y += self->velocity.y;
 }
 
-void Player_do_friction(Player *self, float friction) {
-  self->velocity.x *= friction;
+void Player_do_friction(Player *self, float friction, bool grounded) {
+  if (grounded) { self->velocity.x *= friction; }
 }
 
 typedef enum {
@@ -49,7 +49,7 @@ typedef enum {
 } MovementDireciton;
 
 // assumes that the vector is normalized
-void player_move_direction(Player *self, MovementDireciton dir) {
+void player_move_direction(Player *self, MovementDireciton dir, bool touching_ground) {
   const float PLAYER_MAX_SPEED = 10.0;
   const float PLAYER_ACCELERATION = 1.3;
   const float PLAYER_AIR_ACCELERATION = 1.05;
@@ -64,10 +64,10 @@ void player_move_direction(Player *self, MovementDireciton dir) {
   if (self->velocity.x < 0.0) { velocity_sign = -1;}
 
   if (velocity_sign == direction_sign) {
-    if (self->is_grounded) { self->velocity.x *= PLAYER_ACCELERATION; }
+    if (touching_ground) { self->velocity.x *= PLAYER_ACCELERATION; }
     else { self->velocity.x *= PLAYER_AIR_ACCELERATION; }
   }else {
-    if (self->is_grounded) { self->velocity.x /= PLAYER_ACCELERATION; }
+    if (touching_ground) { self->velocity.x /= PLAYER_ACCELERATION; }
     else { self->velocity.x /= PLAYER_AIR_ACCELERATION; }
   }
 
@@ -123,86 +123,150 @@ int main() {
 
   SetTargetFPS(60);
 
+  bool touched_ground_last_frame = false;
+
   while(!WindowShouldClose()) {
-    if (IsKeyDown(KEY_D)) { player_move_direction(&player, MOVE_RIGHT); }
-    if (IsKeyDown(KEY_A)) { player_move_direction(&player, MOVE_LEFT); }
-    if (IsKeyPressed(KEY_SPACE) && player.is_grounded) {
+    if (IsKeyDown(KEY_D)) { player_move_direction(&player, MOVE_RIGHT, touched_ground_last_frame); }
+    if (IsKeyDown(KEY_A)) { player_move_direction(&player, MOVE_LEFT, touched_ground_last_frame); }
+    if (IsKeyPressed(KEY_SPACE) && player.can_jump) {
       player.velocity.y -= 20.0;
-      player.is_grounded = false;
+      player.can_jump = false;
     }
     if (IsKeyPressed(KEY_P)) { frame_mode = !frame_mode; }
 
-    if (player.is_grounded == true) {
-      Player_do_friction(&player, 0.85);
-    }
+    // if (player.can_jump == true) {
+    Player_do_friction(&player, 0.85, touched_ground_last_frame);
+    // }
     if (IsKeyDown(KEY_S)) {
       Player_apply_gravity(&player, 1.2, 15.0);
     }else {
       Player_apply_gravity(&player, 1.1, 10.0);
     }
+    touched_ground_last_frame = false;
 
     if (player.body.y > 300.0) {
       player.body.x = level.start_position.x;
       player.body.y = level.start_position.y;
       player.velocity = (Vector2){ .x = 0.0, .y = 0.0 };
     }
-    
-    Player_move(&player);
 
     List_foreach(Platform, level.platforms, {
       Rectangle overlap = GetCollisionRec(player.body, item->body);
-      bool player_collides = CheckCollisionLines(
-        // player.body,
-        (Vector2){ .x = player.body.x, .y = player.body.y },
-        (Vector2){ .x = player.body.x + player.velocity.x, .y = player.body.y + player.velocity.y },
-        (Vector2){ .x = item->body.x, .y = item->body.y },
-        (Vector2){ .x = item->body.x+item->body.width, .y = item->body.y },
-        NULL
-      ) || CheckCollisionLines(
-        // player.body,
-        (Vector2){ .x = player.body.x, .y = player.body.y - player.body.height },
-        (Vector2){ .x = player.body.x + player.velocity.x, .y = player.body.y - player.body.height + player.velocity.y },
-        (Vector2){ .x = item->body.x, .y = item->body.y },
-        (Vector2){ .x = item->body.x+item->body.width, .y = item->body.y },
-        NULL
-      );
-      if (overlap.height != 0.0) {
-        if (item->type == PLAT_BOUYANT) {
+      // if (overlap.height != 0.0) {
+      if (item->type == PLAT_BOUYANT) {
+        if (overlap.height != 0.0) {
           if (player.velocity.y > 0.0) { player.velocity.y = 0.0; player.body.y = item->body.y - player.body.height; }
           else{ player.velocity.y -= overlap.height; }
+          player.can_jump = true;
+          touched_ground_last_frame = true;
         }
-        // reverse bounce
-        // if (player.velocity.y > 0.0) { player.velocity.y = 0.0; }
-        // player.velocity.y *= -2.0;
-        // booster bounce
-        // if (player.velocity.y > 0.0) { player.velocity.y = 0.0; }
-        // player.velocity.y -= overlap.height;
-        else if (item->type == PLAT_BOUNCY) {
+      }
+      // reverse bounce
+      // if (player.velocity.y > 0.0) { player.velocity.y = 0.0; }
+      // player.velocity.y *= -2.0;
+      // booster bounce
+      // if (player.velocity.y > 0.0) { player.velocity.y = 0.0; }
+      // player.velocity.y -= overlap.height;
+      else if (item->type == PLAT_BOUNCY) {
+        if (overlap.height != 0.0) {
           if (player.velocity.y > 0.0) { player.velocity.y *= -1.0; }
-        }else if(item->type == PLAT_SOLID) {
-          // This is supposed to do vector collision physics but I don't think it works right
-          if (player_collides) { 
-            player.body.y = item->body.y - player.body.height;
+          else { player.velocity.y -= 10.0; }
+          player.can_jump = true;
+          touched_ground_last_frame = true;
+        }
+      }else if(item->type == PLAT_SOLID) {
+        // This is supposed to do vector collision physics but I don't think it works right
+        // bool player_collides = CheckCollisionLines(
+        //   // player.body,
+        //   (Vector2){ .x = player.body.x, .y = player.body.y },
+        //   (Vector2){ .x = player.body.x + player.velocity.x, .y = player.body.y + player.velocity.y },
+        //   (Vector2){ .x = item->body.x, .y = item->body.y },
+        //   (Vector2){ .x = item->body.x+item->body.width, .y = item->body.y },
+        //   NULL
+        // );
+        bool in_collision_range = (
+          player.body.x + player.body.width + player.velocity.x > item->body.x &&
+          player.body.x + player.velocity.x < item->body.x + item->body.width
+        );
+        if (in_collision_range) {
+        // if (true) {
+          bool player_above = player.body.y < item->body.y - item->body.height;
+          bool next_frame_player_above = player.body.y + player.body.height + player.velocity.y <= item->body.y - item->body.height;
+          bool will_collide_from_top = player_above && !next_frame_player_above;
+
+          bool player_below = player.body.y > item->body.y;
+          bool next_frame_player_below = player.body.y + player.velocity.y > item->body.y;
+          bool will_collide_from_bottom = player_below && !next_frame_player_below;
+
+          // fprintf(stderr,
+          //   "DBG pa %u na %u, ct %u | pb %u, nb %u, cb %u\n",
+          //   player_above, next_frame_player_above, will_collide_from_top,
+          //   player_below, next_frame_player_below, will_collide_from_bottom
+          // );
+
+          if (will_collide_from_top) {
+            // fprintf(stderr, "DBG: colliding from top\n");
+            // do collision
             player.velocity.y = 0.0;
-            player.is_grounded = true;
-          }
-          else if (CheckCollisionRecs(player.body, item->body)) {
-            if (player.velocity.y < 0.0) {
+            player.body.y = item->body.y - player.body.height;
+            player.can_jump = true;
+            touched_ground_last_frame = true;
+          }else {
+            // bool player_below = player.body.y - player.body.height > item->body.y;
+            // bool next_frame_player_below = player.body.y + player.velocity.y - player.body.height > item->body.y;
+            // bool will_collide_from_bottom = player_below && !next_frame_player_below;
+
+            // fprintf(stderr,
+            //   "DBG pa %u na %u, ct %u | pb %u, nb %u, cb %u\n",
+            //   player_above, next_frame_player_above, will_collide_from_top,
+            //   player_below, next_frame_player_below, will_collide_from_bottom
+            // );
+
+            if (will_collide_from_bottom) {
+              fprintf(stderr, "DBG: colliding from below\n");
+              // do collision
+              player.velocity.y = 0.0;
               player.body.y = item->body.y + item->body.height;
-              player.velocity.y = 0.0;
-              player.is_grounded = false;
-            }else {
-              player.body.y = item->body.y - player.body.height;
-              player.velocity.y = 0.0;
-              player.is_grounded = true;
+              player.can_jump = true;
+              // touched_ground_last_frame = false;
             }
           }
-        }else {
-          fprintf(stderr, "Error: platform type invalid or not implemented\n");
         }
-        player.is_grounded = true;
+        // player_collides |= CheckCollisionLines(
+        //   (Vector2){ .x = player.body.x, .y = player.body.y + player.body.height },
+        //   (Vector2){ .x = player.body.x}, , , )
+        // ) || CheckCollisionLines(
+        //   // player.body,
+        //   (Vector2){ .x = player.body.x, .y = player.body.y - player.body.height },
+        //   (Vector2){ .x = player.body.x + player.velocity.x, .y = player.body.y - player.body.height + player.velocity.y },
+        //   (Vector2){ .x = item->body.x, .y = item->body.y },
+        //   (Vector2){ .x = item->body.x+item->body.width, .y = item->body.y },
+        //   NULL
+        // );
+        // if (player_collides) { 
+        //   player.body.y = item->body.y - player.body.height -1;
+        //   player.velocity.y = 0.0;
+        // }
+        // player.is_grounded = true;
+        // else if (CheckCollisionRecs(player.body, item->body)) {
+        //   if (player.velocity.y < 0.0) {
+        //     player.body.y = item->body.y + item->body.height;
+        //     player.velocity.y = 0.0;
+        //     player.is_grounded = false;
+        //   }else {
+        //     player.body.y = item->body.y - player.body.height;
+        //     player.velocity.y = 0.0;
+        //     player.is_grounded = true;
+        //   }
+        // }
+        // }else {
+        //   fprintf(stderr, "Error: platform type invalid or not implemented\n");
+        // }
+        // player.is_grounded = true;
       }
     });
+
+    Player_move(&player);
     
     camera.target = (Vector2){ player.body.x, player.body.y };
 
