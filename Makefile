@@ -17,7 +17,7 @@ vg:
 flark: src/*
 	gcc src/level_loader.c src/main.c -I../plustypes/src -lm $(raylib_flags) -Wall -Werror -Wpedantic -o flark
 
-flark_w32:
+flark_w32: src/*
 	zig cc src/main.c -c \
 		-I../plustypes/src -Iraylib/build/raylib/include \
 		-Wall -Wpedantic \
