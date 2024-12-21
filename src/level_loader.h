@@ -19,6 +19,7 @@ typedef struct {
 
 declare_List(Platform)
 const Platform Platform_new(float x, float y, float w, float h, Color color, PlatformType type);
+int32_t parse_int(char *string, size_t len);
 
 
 typedef struct {

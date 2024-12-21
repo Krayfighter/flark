@@ -2,9 +2,11 @@
 
 #include "stdint.h"
 #include "stdio.h"
-#include "math.h"
+// #include "math.h"
 #include "stdlib.h"
 #include "string.h"
+#include "errno.h"
+#include "dirent.h"
 
 #ifndef WIN32
 #include "sys/fcntl.h"
@@ -16,70 +18,28 @@
 #endif
 
 #include "raylib.h"
+// #include "raymath.h"
+#include "external/glfw/include/GLFW/glfw3.h"
 
 #include "plustypes.h"
 #include "level_loader.h"
+#include "player.h"
 
 
-typedef struct {
-  Rectangle body;
-  Vector2 velocity;
-  bool can_jump;
-} Player;
+typedef struct { char *string; } CharString;
 
-void Player_apply_gravity(Player *self, float strength, float terminal_velocity) {
-  // const float G = 1.1;
-  // float G = s
-  if (self->velocity.y < 0.0) {
-    self->velocity.y = (self->velocity.y / strength) + 0.2;
-  }else {
-    self->velocity.y = (self->velocity.y * strength) + 0.2;
+declare_List(CharString)
+define_List(CharString)
+
+bool str_endswith(char *string, size_t len, char *postfix, size_t plen) {
+  if (plen > len) { return false; }
+  bool not_endswith = false;
+  for (ssize_t n_index = 0; n_index < plen; n_index += 1) {
+    not_endswith |= (string[len-n_index] != postfix[plen-n_index]);
   }
-  // self->velocity.y -= (self->velocity.y + 0.01);
-  if (self->velocity.y > terminal_velocity) { self->velocity.y = terminal_velocity; }
+  return !not_endswith;
 }
 
-void Player_move(Player *self) {
-  self->body.x += self->velocity.x;
-  self->body.y += self->velocity.y;
-}
-
-void Player_do_friction(Player *self, float friction, bool grounded) {
-  if (grounded) { self->velocity.x *= friction; }
-}
-
-typedef enum {
-  MOVE_RIGHT,
-  MOVE_LEFT,
-} MovementDireciton;
-
-// assumes that the vector is normalized
-void player_move_direction(Player *self, MovementDireciton dir, bool touching_ground) {
-  const float PLAYER_MAX_SPEED = 10.0;
-  const float PLAYER_ACCELERATION = 1.3;
-  const float PLAYER_AIR_ACCELERATION = 1.05;
-
-  int direction_sign = 1;
-  if (dir == MOVE_LEFT) { direction_sign = -1; }
-
-  
-  self->velocity.x += 0.1 * direction_sign;
-
-  int velocity_sign = 1;
-  if (self->velocity.x < 0.0) { velocity_sign = -1;}
-
-  if (velocity_sign == direction_sign) {
-    if (touching_ground) { self->velocity.x *= PLAYER_ACCELERATION; }
-    else { self->velocity.x *= PLAYER_AIR_ACCELERATION; }
-  }else {
-    if (touching_ground) { self->velocity.x /= PLAYER_ACCELERATION; }
-    else { self->velocity.x /= PLAYER_AIR_ACCELERATION; }
-  }
-
-  if (fabsf(self->velocity.x) > PLAYER_MAX_SPEED) {
-    self->velocity.x = PLAYER_MAX_SPEED * velocity_sign;
-  }
-}
 
 #ifdef TESTS
 int main() {
@@ -92,18 +52,73 @@ int main() {
   else { fprintf(stderr, "SUCCESS: parse_int hase passed its test unit\n"); }
 }
 #else
-int main() {
+int main(int argc, char **argv) {
 
+  FILE *level_file = NULL;
+  if (argc > 1) {
+    if (argc > 2) { fprintf(stderr, "WARN: only one level file is supported at a time\n"); }
+    level_file = fopen(argv[1], "r");
+    if (level_file == NULL) {
+      fprintf(stderr, "Error: unable to open file -> %s\n", strerror(errno));
+      exit(-1);
+    }
+  }else {
+    DIR *current_dir = opendir(".");
+    List_CharString level_names = List_CharString_new(4);
 
-  const uint32_t WINDOW_WIDTH = 600;
-  const uint32_t WINDOW_HEIGHT = 400;
+    struct dirent *entry = NULL;
+    while((entry = readdir(current_dir)) != NULL) {
+      size_t name_len = strlen(entry->d_name);
+      if (str_endswith(entry->d_name, name_len, ".lvl", 4)) {
+        char *buffer = malloc(name_len);
+        memcpy(buffer, entry->d_name, name_len);
+        List_CharString_push(&level_names, (CharString){ .string = buffer });
+      }
+    }
+    closedir(current_dir);
 
-  InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "flark");
-  SetWindowPosition(30, 30);
+    if (level_names.item_count == 0) {
+      fprintf(stderr, "Error: no level files found in current directory, make a .lvl file or download the example from https://github.com/Krayfighter/flark/blob/master/main.lvl\n");
+      exit(-1);
+    }
+    for (size_t i = 0; i < level_names.item_count; i += 1) {
+      printf("(%lu): %s\n", i, List_CharString_get(&level_names, i)->string);
+    }
+    printf("Enter a level number: ");
+    fflush(stdout);
+
+    char input_buffer[4];
+    fgets(input_buffer, 4, stdin);
+    size_t len = strlen(input_buffer);
+    input_buffer[len-2] = '\0';
+    int32_t index = parse_int(input_buffer, strlen(input_buffer));
+    if (index < 0) { fprintf(stderr, "WARN: ignoring sign of negative number: %i index\n", index); }
+    index = abs(index);
+    if (index > level_names.item_count) {
+      fprintf(stderr, "Error: index out of range: %i\n", index);
+      exit(-1);
+    }
+    level_file = fopen(List_CharString_get(&level_names, index)->string, "r");
+    if (level_file == NULL) {
+      fprintf(stderr, "Error: unable to open file -> %s\n", strerror(errno));
+      exit(-1);
+    }
+  }
+
+  SetConfigFlags(FLAG_WINDOW_MAXIMIZED | FLAG_WINDOW_RESIZABLE);
+  InitWindow(0, 0, "flark");
+  MaximizeWindow();
+
+  // raylib has its own functions for getting window width and height
+  // but they aren't working correctly, so I use the glfw functions instead
+  int window_width;
+  int window_height;
+  glfwGetWindowSize(GetWindowHandle(), &window_width, &window_height);
+
 
   printf("\n\n\n"); // put some space between raylib init logging
   
-  FILE *level_file = fopen("main.lvl", "r");
+  // FILE *level_file = fopen("main.lvl", "r");
   Level level = parse_level_stream(level_file);
 
   Player player = (Player) {
@@ -112,8 +127,8 @@ int main() {
   };
 
   Camera2D camera;
-  camera.target = (Vector2){ 20.0, 20.0 };
-  camera.offset = (Vector2){ WINDOW_WIDTH / 2.0, WINDOW_HEIGHT / 2.0 };
+  camera.target = (Vector2){ 0.0, 0.0 };
+  camera.offset = (Vector2){ (float)window_width / 2.0, (float)window_height / 2.0 };
   camera.rotation = 0.0;
   camera.zoom = 1.0;
 
@@ -121,26 +136,51 @@ int main() {
 
   SetTargetFPS(60);
 
-  bool touched_ground_last_frame = false;
+  // bool touched_ground_last_frame = false;
+  // bool controller_mode = false;
+
+
+  fprintf(stderr, "DBG: gamepad name %s\n", GetGamepadName(0));
 
   while(!WindowShouldClose()) {
-    if (IsKeyDown(KEY_D)) { player_move_direction(&player, MOVE_RIGHT, touched_ground_last_frame); }
-    if (IsKeyDown(KEY_A)) { player_move_direction(&player, MOVE_LEFT, touched_ground_last_frame); }
-    if (IsKeyPressed(KEY_SPACE) && player.can_jump) {
-      player.velocity.y -= 20.0;
-      player.can_jump = false;
-    }
+    // if (IsGamepadAvailable(0)) { controller_mode = true; }
+    player.input_state.controller_mode = IsGamepadAvailable(0);
+    Player_step_input_frame(&player);
+    // if (!controller_mode) {
+    //   // if (IsKeyDown(KEY_D)) { player_move_direction(&player, MOVE_RIGHT, touched_ground_last_frame); }
+    //   // if (IsKeyDown(KEY_A)) { player_move_direction(&player, MOVE_LEFT, touched_ground_last_frame); }
+    //   // if (IsKeyPressed(KEY_SPACE) && player.can_jump) {
+    //   //   player.velocity.y -= 20.0;
+    //   //   player.can_jump = false;
+    //   // }
+    // }else {
+    //   // if (IsGamepadAvailable(0)) {
+    //   float x = GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_X);
+    //   // float y = GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_Y);
+    //   if (fabsf(x) > 0.1) {
+    //     fprintf(stderr, "DBG: x pad %f\n", x);
+    //     x = Clamp(x * 1.5, -1.0, 1.0);
+    //     // player_move_analogue(&player, touched_ground_last_frame, x);
+    //   }
+    //   switch (GetGamepadButtonPressed()) {
+    //     case GAMEPAD_BUTTON_RIGHT_FACE_RIGHT: {
+    //       if (player.can_jump) { player.velocity.y -= 20.0; player.can_jump = false; }
+    //     } break;
+    //   }
+    //   // }else {
+    //   //   fprintf(stderr, "DBG: gamepad not available\n");
+    //   // }
+    // }
     if (IsKeyPressed(KEY_P)) { frame_mode = !frame_mode; }
 
-    // if (player.can_jump == true) {
-    Player_do_friction(&player, 0.85, touched_ground_last_frame);
-    // }
+    Player_do_friction(&player, 0.85);
     if (IsKeyDown(KEY_S)) {
       Player_apply_gravity(&player, 1.2, 15.0);
     }else {
       Player_apply_gravity(&player, 1.1, 10.0);
     }
-    touched_ground_last_frame = false;
+    // touched_ground_last_frame = false;
+    player.touching_ground = false;
 
     if (player.body.y > 300.0) {
       player.body.x = level.start_position.x;
@@ -156,7 +196,8 @@ int main() {
           if (player.velocity.y > 0.0) { player.velocity.y = 0.0; player.body.y = item->body.y - player.body.height; }
           else{ player.velocity.y -= overlap.height; }
           player.can_jump = true;
-          touched_ground_last_frame = true;
+          // touched_ground_last_frame = true;
+          player.touching_ground = true;
         }
       }
       // reverse bounce
@@ -170,18 +211,9 @@ int main() {
           if (player.velocity.y > 0.0) { player.velocity.y *= -1.0; }
           else { player.velocity.y -= 10.0; }
           player.can_jump = true;
-          touched_ground_last_frame = true;
+          player.touching_ground = true;
         }
       }else if(item->type == PLAT_SOLID) {
-        // This is supposed to do vector collision physics but I don't think it works right
-        // bool player_collides = CheckCollisionLines(
-        //   // player.body,
-        //   (Vector2){ .x = player.body.x, .y = player.body.y },
-        //   (Vector2){ .x = player.body.x + player.velocity.x, .y = player.body.y + player.velocity.y },
-        //   (Vector2){ .x = item->body.x, .y = item->body.y },
-        //   (Vector2){ .x = item->body.x+item->body.width, .y = item->body.y },
-        //   NULL
-        // );
         bool in_collision_range = (
           player.body.x + player.body.width + player.velocity.x > item->body.x &&
           player.body.x + player.velocity.x < item->body.x + item->body.width
@@ -196,71 +228,19 @@ int main() {
           bool next_frame_player_below = player.body.y + player.velocity.y > item->body.y;
           bool will_collide_from_bottom = player_below && !next_frame_player_below;
 
-          // fprintf(stderr,
-          //   "DBG pa %u na %u, ct %u | pb %u, nb %u, cb %u\n",
-          //   player_above, next_frame_player_above, will_collide_from_top,
-          //   player_below, next_frame_player_below, will_collide_from_bottom
-          // );
-
           if (will_collide_from_top) {
-            // fprintf(stderr, "DBG: colliding from top\n");
             // do collision
             player.velocity.y = 0.0;
             player.body.y = item->body.y - player.body.height;
             player.can_jump = true;
-            touched_ground_last_frame = true;
-          }else {
-            // bool player_below = player.body.y - player.body.height > item->body.y;
-            // bool next_frame_player_below = player.body.y + player.velocity.y - player.body.height > item->body.y;
-            // bool will_collide_from_bottom = player_below && !next_frame_player_below;
-
-            // fprintf(stderr,
-            //   "DBG pa %u na %u, ct %u | pb %u, nb %u, cb %u\n",
-            //   player_above, next_frame_player_above, will_collide_from_top,
-            //   player_below, next_frame_player_below, will_collide_from_bottom
-            // );
-
-            if (will_collide_from_bottom) {
-              // fprintf(stderr, "DBG: colliding from below\n");
-              // do collision
-              player.velocity.y = 0.0;
-              player.body.y = item->body.y + item->body.height;
-              player.can_jump = true;
-              // touched_ground_last_frame = false;
-            }
+          player.touching_ground = true;
+          }else if (will_collide_from_bottom) {
+            // do collision
+            player.velocity.y = 0.0;
+            player.body.y = item->body.y + item->body.height;
+            player.can_jump = true;
           }
         }
-        // player_collides |= CheckCollisionLines(
-        //   (Vector2){ .x = player.body.x, .y = player.body.y + player.body.height },
-        //   (Vector2){ .x = player.body.x}, , , )
-        // ) || CheckCollisionLines(
-        //   // player.body,
-        //   (Vector2){ .x = player.body.x, .y = player.body.y - player.body.height },
-        //   (Vector2){ .x = player.body.x + player.velocity.x, .y = player.body.y - player.body.height + player.velocity.y },
-        //   (Vector2){ .x = item->body.x, .y = item->body.y },
-        //   (Vector2){ .x = item->body.x+item->body.width, .y = item->body.y },
-        //   NULL
-        // );
-        // if (player_collides) { 
-        //   player.body.y = item->body.y - player.body.height -1;
-        //   player.velocity.y = 0.0;
-        // }
-        // player.is_grounded = true;
-        // else if (CheckCollisionRecs(player.body, item->body)) {
-        //   if (player.velocity.y < 0.0) {
-        //     player.body.y = item->body.y + item->body.height;
-        //     player.velocity.y = 0.0;
-        //     player.is_grounded = false;
-        //   }else {
-        //     player.body.y = item->body.y - player.body.height;
-        //     player.velocity.y = 0.0;
-        //     player.is_grounded = true;
-        //   }
-        // }
-        // }else {
-        //   fprintf(stderr, "Error: platform type invalid or not implemented\n");
-        // }
-        // player.is_grounded = true;
       }
     });
 
