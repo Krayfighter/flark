@@ -94,24 +94,17 @@ int main() {
 #else
 int main() {
 
-  FILE *level_file = fopen("main.lvl", "r");
-  // char buffer[512];
-  // while (fgets(buffer, 512, level_file)) {
-  //   fprintf(stderr, "DBG: file line %s", buffer);
-  // }
-  Level level = parse_level_stream(level_file);
-
-  #ifndef WIN32
-  fcntl(fileno(stdin), F_SETFL, O_NONBLOCK);
-  #endif
 
   const uint32_t WINDOW_WIDTH = 600;
   const uint32_t WINDOW_HEIGHT = 400;
 
   InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "flark");
   SetWindowPosition(30, 30);
+
+  printf("\n\n\n"); // put some space between raylib init logging
   
-  // Vector2 start_position = (Vector2){ .x = 20.0, .y = 0.0 };
+  FILE *level_file = fopen("main.lvl", "r");
+  Level level = parse_level_stream(level_file);
 
   Player player = (Player) {
     .body = (Rectangle){ .x = level.start_position.x, .y = level.start_position.y, .width = 10.0, .height = 20.0 },
@@ -228,7 +221,7 @@ int main() {
             // );
 
             if (will_collide_from_bottom) {
-              fprintf(stderr, "DBG: colliding from below\n");
+              // fprintf(stderr, "DBG: colliding from below\n");
               // do collision
               player.velocity.y = 0.0;
               player.body.y = item->body.y + item->body.height;

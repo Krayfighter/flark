@@ -127,7 +127,6 @@ bool TEST_parse_int(FILE *logger) {
 
 
 Level parse_level_stream(FILE *stream) {
-  fprintf(stderr, "DBG running parser\n");
   char line_buffer[512];
 
   Level self = (Level){
@@ -149,11 +148,10 @@ Level parse_level_stream(FILE *stream) {
         .color = (Color){ .r = 255, .g = 255, .b = 255, .a = 255 },
         .type = PLAT_BOUYANT
       };
-      fprintf(stderr, "DBG %s\n", line_buffer + 9);
       char *token = strtok(line_buffer+9, ";");
 
       while (token != NULL) {
-        fprintf(stderr, "DBG: token -> %s\n", token);
+        if (token[0] == '\n') { break; }
         size_t item_len = strlen(token);
         if (item_len < 2) { fprintf(stderr, "Error: syntax error on line %lu\n", line_number); }
 
@@ -206,16 +204,16 @@ Level parse_level_stream(FILE *stream) {
           }; break;
           default: fprintf(stderr, "WARN: invalid directive on line %lu (%s)\n", line_number, token);
         }
-        if (errno != 0) { fprintf(stderr, "Error: invalid number parsed on line %lu (defaulting to 0.0)\n", line_number);}
+        // if (errno != 0) { fprintf(stderr, "Error: invalid number parsed on line %lu (defaulting to 0.0)\n", line_number);}
         token = strtok(NULL, ";"); // get next token
       }
       List_Platform_push(&self.platforms, plat);
-      Platform_DBG(List_Platform_get(&self.platforms, 0), stderr);
     }
     // parse a home point declaration
     else if (string_starts(line_buffer, buffer_len, "Home:", 5)) {
       char *token = strtok(line_buffer + 5, ";");
       while (token != NULL) {
+        if (token[0] == '\n') { break; }
         int32_t value = parse_int(token+1, strlen(token+1));
         switch (token[0]) {
           case 'x': self.start_position.x = value; break;
@@ -228,6 +226,7 @@ Level parse_level_stream(FILE *stream) {
     else if (string_starts(line_buffer, buffer_len, "Background:", 11)) {
       char *token = strtok(line_buffer + 11, ";");
       while (token != NULL) {
+        if (token[0] == '\n') { break; }
         int32_t value = parse_int(token+1, strlen(token+1));
         switch(token[0]) {
           case 'r': self.background_color.r = value; break;
@@ -244,7 +243,6 @@ Level parse_level_stream(FILE *stream) {
       fprintf(stderr, "INFO: this line contains an error -> |%s|\n", line_buffer);
     }
   }
-  fprintf(stderr, "DBG number of platforms -> %lu\n", self.platforms.item_count);
 
   return self;
 }
