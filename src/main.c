@@ -62,15 +62,21 @@ int main(int argc, char **argv) {
       fprintf(stderr, "Error: unable to open file -> %s\n", strerror(errno));
       exit(-1);
     }
-  }else {
+  }
+  #ifndef WIN32 // NOTE this is part of a workaround (see #else below)
+  else {
     DIR *current_dir = opendir(".");
     List_CharString level_names = List_CharString_new(4);
 
     struct dirent *entry = NULL;
     while((entry = readdir(current_dir)) != NULL) {
       size_t name_len = strlen(entry->d_name);
+      for (size_t i = 0; i < 255; i += 1) {
+        fprintf(stderr, "DBG: bytes %lu, %u\n", i, entry->d_name[i]);
+      }
+      // size_t name_len = entry->d_name;
       if (str_endswith(entry->d_name, name_len, ".lvl", 4)) {
-        char *buffer = malloc(name_len);
+        char *buffer = malloc(name_len+1);
         memcpy(buffer, entry->d_name, name_len);
         List_CharString_push(&level_names, (CharString){ .string = buffer });
       }
@@ -82,7 +88,7 @@ int main(int argc, char **argv) {
       exit(-1);
     }
     for (size_t i = 0; i < level_names.item_count; i += 1) {
-      printf("(%lu): %s\n", i, List_CharString_get(&level_names, i)->string);
+      printf("(%lu): |%s|\n", i, List_CharString_get(&level_names, i)->string);
     }
     printf("Enter a level number: ");
     fflush(stdout);
@@ -90,7 +96,8 @@ int main(int argc, char **argv) {
     char input_buffer[4];
     fgets(input_buffer, 4, stdin);
     size_t len = strlen(input_buffer);
-    input_buffer[len-2] = '\0';
+    input_buffer[len-1] = '\0';
+    fprintf(stderr, "DBG: Input buffer, |%s|", input_buffer);
     int32_t index = parse_int(input_buffer, strlen(input_buffer));
     if (index < 0) { fprintf(stderr, "WARN: ignoring sign of negative number: %i index\n", index); }
     index = abs(index);
@@ -104,16 +111,27 @@ int main(int argc, char **argv) {
       exit(-1);
     }
   }
+  #else
+  // NOTE this is workaround code for otherwise broken functionality on windows
+  fprintf(stderr, "WARN: level selection currently fails on windows, this is known bug\n");
+  level_file = fopen("main.lvl", "r");
+  if (level_file == NULL) {
+    fprintf(stderr, "Error: failed to load main.lvl, please download it from the github repo\n");
+    exit(-1);
+  }
+  #endif
 
   SetConfigFlags(FLAG_WINDOW_MAXIMIZED | FLAG_WINDOW_RESIZABLE);
   InitWindow(0, 0, "flark");
   MaximizeWindow();
 
+  int window_width = 600;
+  int window_height = 400;
+  #ifndef WIN32 // NOTE this is part of another workaround, there seem to be glfw linking issues for windows
   // raylib has its own functions for getting window width and height
   // but they aren't working correctly, so I use the glfw functions instead
-  int window_width;
-  int window_height;
   glfwGetWindowSize(GetWindowHandle(), &window_width, &window_height);
+  #endif
 
 
   printf("\n\n\n"); // put some space between raylib init logging
