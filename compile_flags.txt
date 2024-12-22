@@ -1,3 +1,5 @@
 
--I../plustypes/src
+-Iplustypes/src
+-Iraylib/raylib_out/lib
+-Iraylib/src
 

@@ -7,4 +7,7 @@ flark_w32.pdb
 *.obj
 raylib/
 
+.zig-cache
+build/
+
 
