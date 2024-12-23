@@ -9,6 +9,7 @@ typedef enum {
   PLAT_BOUNCY,
   PLAT_BOUYANT,
   PLAT_SOLID,
+  PLAT_KILL,
 } PlatformType;
 
 typedef struct {

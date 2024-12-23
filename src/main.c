@@ -161,36 +161,12 @@ int main(int argc, char **argv) {
   fprintf(stderr, "DBG: gamepad name %s\n", GetGamepadName(0));
 
   while(!WindowShouldClose()) {
-    // if (IsGamepadAvailable(0)) { controller_mode = true; }
     player.input_state.controller_mode = IsGamepadAvailable(0);
-    Player_step_input_frame(&player);
-    // if (!controller_mode) {
-    //   // if (IsKeyDown(KEY_D)) { player_move_direction(&player, MOVE_RIGHT, touched_ground_last_frame); }
-    //   // if (IsKeyDown(KEY_A)) { player_move_direction(&player, MOVE_LEFT, touched_ground_last_frame); }
-    //   // if (IsKeyPressed(KEY_SPACE) && player.can_jump) {
-    //   //   player.velocity.y -= 20.0;
-    //   //   player.can_jump = false;
-    //   // }
-    // }else {
-    //   // if (IsGamepadAvailable(0)) {
-    //   float x = GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_X);
-    //   // float y = GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_Y);
-    //   if (fabsf(x) > 0.1) {
-    //     fprintf(stderr, "DBG: x pad %f\n", x);
-    //     x = Clamp(x * 1.5, -1.0, 1.0);
-    //     // player_move_analogue(&player, touched_ground_last_frame, x);
-    //   }
-    //   switch (GetGamepadButtonPressed()) {
-    //     case GAMEPAD_BUTTON_RIGHT_FACE_RIGHT: {
-    //       if (player.can_jump) { player.velocity.y -= 20.0; player.can_jump = false; }
-    //     } break;
-    //   }
-    //   // }else {
-    //   //   fprintf(stderr, "DBG: gamepad not available\n");
-    //   // }
-    // }
+    Player_step_input_frame(&player); // handle input for player
+
     if (IsKeyPressed(KEY_P)) { frame_mode = !frame_mode; }
 
+    // TODO move this into Player_step_input_frame
     Player_do_friction(&player, 0.85);
     if (IsKeyDown(KEY_S)) {
       Player_apply_gravity(&player, 1.2, 15.0);
@@ -232,34 +208,46 @@ int main(int argc, char **argv) {
           player.touching_ground = true;
         }
       }else if(item->type == PLAT_SOLID) {
-        bool in_collision_range = (
-          player.body.x + player.body.width + player.velocity.x > item->body.x &&
-          player.body.x + player.velocity.x < item->body.x + item->body.width
-        );
-        if (in_collision_range) {
-        // if (true) {
-          bool player_above = player.body.y < item->body.y - item->body.height;
-          bool next_frame_player_above = player.body.y + player.body.height + player.velocity.y <= item->body.y - item->body.height;
-          bool will_collide_from_top = player_above && !next_frame_player_above;
+        // rectangles_collide_axis(&player, item->body);
+        Player_collide_rect(&player, item->body);
+        // bool in_collision_range = (
+        //   player.body.x + player.body.width + player.velocity.x > item->body.x &&
+        //   player.body.x + player.velocity.x < item->body.x + item->body.width
+        // );
+        // if (in_collision_range) {
+        // // if (true) {
+        //   bool player_above = player.body.y < item->body.y - item->body.height;
+        //   bool next_frame_player_above = player.body.y + player.body.height + player.velocity.y <= item->body.y - item->body.height;
+        //   bool will_collide_from_top = player_above && !next_frame_player_above;
 
-          bool player_below = player.body.y > item->body.y;
-          bool next_frame_player_below = player.body.y + player.velocity.y > item->body.y;
-          bool will_collide_from_bottom = player_below && !next_frame_player_below;
+        //   bool player_below = player.body.y > item->body.y;
+        //   bool next_frame_player_below = player.body.y + player.velocity.y > item->body.y;
+        //   bool will_collide_from_bottom = player_below && !next_frame_player_below;
 
-          if (will_collide_from_top) {
-            // do collision
-            player.velocity.y = 0.0;
-            player.body.y = item->body.y - player.body.height;
-            player.can_jump = true;
-          player.touching_ground = true;
-          }else if (will_collide_from_bottom) {
-            // do collision
-            player.velocity.y = 0.0;
-            player.body.y = item->body.y + item->body.height;
-            player.can_jump = true;
-          }
+        //   if (will_collide_from_top) {
+        //     // do collision
+        //     player.velocity.y = 0.0;
+        //     player.body.y = item->body.y - player.body.height;
+        //     player.can_jump = true;
+        //   player.touching_ground = true;
+        //   }else if (will_collide_from_bottom) {
+        //     // do collision
+        //     player.velocity.y = 0.0;
+        //     player.body.y = item->body.y + item->body.height;
+        //     player.can_jump = true;
+        //   }
+        // }
+      }else if (item->type == PLAT_KILL) {
+        if (overlap.height != 0.0 || overlap.width != 0.0) {
+          player.body.x = level.start_position.x;
+          player.body.y = level.start_position.y;
+          player.velocity.x = 0.0;
+          player.velocity.y = 0.0;
+          player.can_jump = false;
+          player.touching_ground = false;
         }
       }
+      else { fprintf(stderr, "WARN: unimplemented Platform type -> %u", item->type); }
     });
 
     Player_move(&player);
@@ -275,9 +263,12 @@ int main(int argc, char **argv) {
       if (item->body.height < 1.0) {
         DrawLine(item->body.x, item->body.y, item->body.x+item->body.width, item->body.y, item->color);
       }else {
-        DrawRectangleRec(item->body, item->color); }
+        DrawRectangleRec(item->body, item->color);
+        if (item->type == PLAT_KILL) {
+          DrawRectangleLinesEx(item->body, 3.0, (Color){ .r = 0xe0, .g = 0x70, .b = 0x05, .a = 0xff });
+        }
       }
-    )
+    } )
     EndMode2D();
 
     EndDrawing();

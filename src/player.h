@@ -24,7 +24,8 @@ void Player_step_input_frame(Player *self);
 void Player_apply_gravity(Player *self, float strength, float terminal_velocity);
 void Player_move(Player *self);
 void Player_do_friction(Player *self, float friction);
-void player_move_analogue(Player *self, bool touching_ground, float input);
+void Player_move_analogue(Player *self, bool touching_ground, float input);
+void Player_collide_rect(Player *self, Rectangle rect);
 
 typedef enum {
   MOVE_RIGHT,

@@ -7,6 +7,8 @@
 
 #include  "player.h"
 
+#include "stdio.h"
+
 
 void Player_step_input_frame(Player *self) {
   // remove inputs that have outlived the buffer time
@@ -27,7 +29,7 @@ void Player_step_input_frame(Player *self) {
     if (fabsf(x) > 0.1) {
       // fprintf(stderr, "DBG: x pad %f\n", x);
       x = Clamp(x * 1.5, -1.0, 1.0);
-      player_move_analogue(self, self->touching_ground, x);
+      Player_move_analogue(self, self->touching_ground, x);
     }
     switch (GetGamepadButtonPressed()) {
       case GAMEPAD_BUTTON_RIGHT_FACE_RIGHT: {
@@ -61,7 +63,7 @@ void Player_do_friction(Player *self, float friction) {
   if (self->touching_ground) { self->velocity.x *= friction; }
 }
 
-void player_move_analogue(Player *self, bool touching_ground, float input) {
+void Player_move_analogue(Player *self, bool touching_ground, float input) {
   const float PLAYER_MAX_SPEED = 10.0;
   const float PLAYER_ACCELERATION = 1.3;
   const float PLAYER_AIR_ACCELERATION = 1.05;
@@ -93,11 +95,61 @@ void player_move_analogue(Player *self, bool touching_ground, float input) {
 // assumes that the vector is normalized
 void player_move_direction(Player *self, MovementDireciton dir, bool touching_ground) {
   if (dir == MOVE_RIGHT) {
-    player_move_analogue(self, touching_ground, 1.0);
+    Player_move_analogue(self, touching_ground, 1.0);
   }else {
-    player_move_analogue(self, touching_ground, -1.0);
+    Player_move_analogue(self, touching_ground, -1.0);
   }
 }
+
+void Player_collide_rect(Player *self, Rectangle rect) {
+  // fprintf(stderr, "\n\n\nDBG: running player collision\n\n\n");
+  bool in_horizontal_collision_range = (
+    self->body.x + self->body.width + self->velocity.x > rect.x &&
+    self->body.x + self->velocity.x < rect.x + rect.width
+  );
+  bool in_vertical_collision_range = (
+    self->body.y + self->body.height > rect.y &&
+    self->body.y + self->velocity.y < rect.y + rect.height
+  );
+  if (in_horizontal_collision_range ) { // VERTICAL collision detection
+  // if (true) {
+    bool self_above = self->body.y < rect.y - rect.height;
+    bool next_frame_self_above = self->body.y + self->body.height + self->velocity.y <= rect.y - rect.height;
+    bool will_collide_from_top = self_above && !next_frame_self_above;
+
+    bool self_below = self->body.y > rect.y;
+    bool next_frame_self_below = self->body.y + self->velocity.y > rect.y;
+    bool will_collide_from_bottom = self_below && !next_frame_self_below;
+
+    if (will_collide_from_top) {
+      // do collision
+      self->velocity.y = 0.0;
+      self->body.y = rect.y - self->body.height;
+      self->can_jump = true;
+      self->touching_ground = true;
+    }else if (will_collide_from_bottom) {
+      // do collision
+      self->velocity.y = 0.0;
+      self->body.y = rect.y + rect.height;
+      self->can_jump = true;
+    }
+  }
+  // fprintf(stderr, "DBG: running collision horizontally\n");
+  // // if (in_vertical_collision_range) { // HORIZONTAL collistion detection
+  //   bool self_left = self->body.x + self->body.width < rect.x;
+  //   bool next_frame_self_left = self->body.x + self->body.width + self->velocity.x <= rect.x;
+  //   bool will_collide_from_left = self_left && !next_frame_self_left;
+
+  //   if (will_collide_from_left) {
+  //     fprintf(stderr, "DBG: collision from left");
+  //     self->velocity.x = 0.0;
+  //     self->body.x = rect.y - self->body.width;
+  //     self->can_jump = true; // ??? TODO implement wall jump ???
+  //     // NOTE not setting touching_ground to true
+  //   }
+  // // }
+}
+
 
 
 

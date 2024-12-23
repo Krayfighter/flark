@@ -171,6 +171,7 @@ Level parse_level_stream(FILE *stream) {
             if (string_match(subtoken, tok_len, "bouyant", 7)) { plat.type = PLAT_BOUYANT; }
             else if (string_match(subtoken, tok_len, "bouncy", 6)) { plat.type = PLAT_BOUNCY; }
             else if (string_match(subtoken, tok_len, "solid", 5)) { plat.type = PLAT_SOLID; }
+            else if (string_match(subtoken, tok_len, "kill", 4)) { plat.type = PLAT_KILL; }
           }; break;
           case 'c': {
             char *subtoken = token+1;
