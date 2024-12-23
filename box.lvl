@@ -1,0 +1,37 @@
+// Level 2
+// Box
+Home:x282;y-40;
+Platform:tsolid;x-500;y-12;w1005;h5;r255;g00;b0;
+Platform:tkill;x-500;y-912;w8;h1112;r1;g1;b1;
+Platform:tkill;x500;y-910;w8;h898;r1;g1;b1;
+Platform:tbouyant;x-500;y-912;w1005;h5;r225;g100;b200;
+Platform:x-450;y-100;w300;r128;a255;tbouncy;
+Platform:tkill;x-500;y-540;w450;h8;r0;g0;b0;
+Platform:tsolid;x250;y-480;w250;h8;r90;g90;b90;a230;
+Platform:tbouyant;x250;y-600;w250;h8;r120;g120;b120;a225;
+Platform:tkill;x750;y-912;w8;h1115;r1;g1;b1;
+Platform:tsolid;x-425;y198;w1183;h8;r10;g170;b145;
+Platform:tkill;x264;y148;w10;h50;r2;g2;b2;
+Platform:tkill;x250;y-7;w10;h94;r2;g2;b2;
+Platform:tkill;x130;y100;w10;h99;r2;g2;b2;
+Platform:tkill;x130;y-7;w10;h37;r2;g2;b2;
+Platform:tkill;x250;y-800;w388;h8;r1;g1;b1;a225;h9;
+Platform:tkill;x665;y-12;w90;h9;r1;g1;b2;
+Platform:tkill;x-75;y135;w10;h64;r2;g2;b2;
+Platform:tkill;x-75;y-7;w10;h76;r2;g2;b2;
+Platform:tkill;x-124;y100;w10;h99;r2;g2;b2;
+Platform:tkill;x-124;y-7;w10;h37;r2;g2;b2;
+Platform:tkill;x0;y-320;w500;h9;r5;g0;b0;
+Platform:tkill;x-500;y-800;w635;h9;r1;g1;b1;
+Platform:tkill;x500;y-1350;w9;h200;r1;g1;b1;
+Platform:tkill;x300;y-1150;w9;h350;r1;g1;b1;
+Platform:tbouncy;x120;y-1000;w125;h12;r10;g241;b11;
+Platform:tkill;x499;y-1000;w9;h200;r1;g1;b1;
+Platform:tkill;x308;y-1000;w264;h9;r1;g1;b1;
+Platform:tkill;x572;y-1065;w9;h74;r1;g1;b1;
+Platform:tbouncy;x170;y-748;w55;h8;r170;g255;b15;
+Platform:tbouncy;x-135;y-325;w75;h8;r170;g255;b15;
+Platform:tkill;x60;y-135;w9;h125;r2;g2;b2;
+Platform:tkill;x278;y-7;w10;h94;r2;g2;b2;
+Platform:tsolid;x-500;y265;w1488;h8;r0;g180;b200;
+Platform:tkill;x750;y-1450;w8;h600;r1;g1;b1;
