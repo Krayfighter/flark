@@ -55,13 +55,10 @@ int main() {
 int main(int argc, char **argv) {
 
   FILE *level_file = NULL;
+  char *level_filename = NULL;
   if (argc > 1) {
     if (argc > 2) { fprintf(stderr, "WARN: only one level file is supported at a time\n"); }
-    level_file = fopen(argv[1], "r");
-    if (level_file == NULL) {
-      fprintf(stderr, "Error: unable to open file -> %s\n", strerror(errno));
-      exit(-1);
-    }
+    level_filename = argv[1];
   }
   #ifndef WIN32 // NOTE this is part of a workaround (see #else below)
   else {
@@ -105,21 +102,17 @@ int main(int argc, char **argv) {
       fprintf(stderr, "Error: index out of range: %i\n", index);
       exit(-1);
     }
-    level_file = fopen(List_CharString_get(&level_names, index)->string, "r");
-    if (level_file == NULL) {
-      fprintf(stderr, "Error: unable to open file -> %s\n", strerror(errno));
-      exit(-1);
-    }
+    level_filename = List_CharString_get(&level_names, index)->string;
   }
   #else
   // NOTE this is workaround code for otherwise broken functionality on windows
   fprintf(stderr, "WARN: level selection currently fails on windows, this is known bug\n");
-  level_file = fopen("main.lvl", "r");
-  if (level_file == NULL) {
-    fprintf(stderr, "Error: failed to load main.lvl, please download it from the github repo\n");
+  level_filename = "main.lvl";
+  #endif
+  if (level_filename == NULL) {
+    fprintf(stderr, "Error: a file must be selected\n");
     exit(-1);
   }
-  #endif
 
   SetConfigFlags(FLAG_WINDOW_MAXIMIZED | FLAG_WINDOW_RESIZABLE);
   InitWindow(0, 0, "flark");
@@ -135,9 +128,16 @@ int main(int argc, char **argv) {
 
 
   printf("\n\n\n"); // put some space between raylib init logging
-  
+
+  load_file:
+  level_file = fopen(level_filename, "r");
+  if (level_file == NULL) {
+    fprintf(stderr, "Error: unable to open file -> %s\n", strerror(errno));
+    exit(-1);
+  }
   // FILE *level_file = fopen("main.lvl", "r");
   Level level = parse_level_stream(level_file);
+  fclose(level_file);
 
   Player player = (Player) {
     .body = (Rectangle){ .x = level.start_position.x, .y = level.start_position.y, .width = 10.0, .height = 20.0 },
@@ -151,6 +151,7 @@ int main(int argc, char **argv) {
   camera.zoom = 1.0;
 
   bool frame_mode = false;
+  bool first_frame = true;
 
   SetTargetFPS(60);
 
@@ -165,6 +166,23 @@ int main(int argc, char **argv) {
     Player_step_input_frame(&player); // handle input for player
 
     if (IsKeyPressed(KEY_P)) { frame_mode = !frame_mode; }
+    if (IsKeyPressed(KEY_R) && !first_frame) {
+      goto load_file;
+      // fclose(level_file);
+      // level_file = fopen(level_filename, "r");
+      // if (level_file == NULL) {
+      //   fprintf(stderr, "Error: failed to reopen file -> %s\n", strerror(errno));
+      //   exit(-1);
+      // }
+      // level = parse_level_stream(level_file);
+      // fclose(level_file);
+      // player.body.x = level.start_position.x;
+      // player.body.y = level.start_position.y;
+      // player.velocity = (Vector2){ .x = 0.0, .y = 0.0 };
+      // player.can_jump = false;
+      // player.touching_ground = false;
+      // continue;
+    }
 
     // TODO move this into Player_step_input_frame
     Player_do_friction(&player, 0.85);
@@ -293,6 +311,7 @@ int main(int argc, char **argv) {
       }
     }
     // #endif
+    first_frame = false;
   }
 
   CloseWindow();
