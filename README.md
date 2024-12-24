@@ -1,7 +1,7 @@
 
-## Flark
+# Flark
 
-#### video game of the century
+### video game of the century
 
 Flark is a 2D platformer with an emphasis on physics,
 movement mechanics, and hackability.
@@ -15,9 +15,9 @@ file selection is not currently working on windows due
 to a bug, so windows builds of flark can only access files
 named main.lvl
 
-### Building
+## Building
 
-#### Dependencies
+### Dependencies
 
 (raylib)[https://www.raylib.com/]
 it is preferred to have raylib source built alongside
@@ -25,7 +25,7 @@ Flark. This is done by downloading raylib 5.5's (github release)[https://github.
 and placing the full contents unziped under <flark dir>/raylib.
 
 
-#### Zig (Preferred)
+### Zig (Preferred)
 
 Although Flark is written in C, it uses zig for its preferred
 build because of zig's cross-platform and cross-compiling support.
@@ -34,7 +34,7 @@ Zig works easily and consistently across platforms and can be downloaded
 on its (website)[https://ziglang.org/download/]. It should be installed to
 system directories or to the flark directory.
 
-##### Step 1 - build raylib
+#### Step 1 - build raylib
 
 make a build directory
 ```mkdir build```
@@ -48,7 +48,7 @@ if this succeeded files should be visible inside the build directory
 
 if this final command shows ```lib``` and ```include``` then the build of raylib was successful
 
-##### Step 2 - build Flark
+#### Step 2 - build Flark
 
 build Flark
 ```zig build -p build```
@@ -59,7 +59,7 @@ copy the binary to thew current directory
 if the final command fails with a message like ```could not copy file: no such file or directory```
 then something has gone wrong, and it is likely that the command prior failed
 
-#### Makefile (for *nix workflows)
+### Makefile (for *nix workflows)
 
 While this may be easier, it is less widely supported and
 still requires zig for the windows build (zig cc for flark_w32, gcc for flark).
@@ -77,7 +77,7 @@ For *nix platforms the executable is install in the base directory
 as ```flark``` and for windows ```flark_w32``` (the .exe may need to be added manually)
 
 
-#### Manual Build (for when things go wrong)
+### Manual Build (for when things go wrong)
 
 for building raylib, see its (README)[https://github.com/raysan5/raylib]
 
@@ -87,14 +87,14 @@ then build flark with something like (windows)
 (linux)
 ```<C Compiler> src/main.c src/level_loader.c src/player.c -L<raylib lib dir> -I<raylib incl dir> -I./plustypes/src -lm -o flark```
 
-### Level Files
+## Level Files
 
 Flark loads its level from files ending in .lvl (currently the windows version only supports main.lvl)
 and will search the current working directory for any files ending
 in .lvl.
 
 
-#### Format
+### Format
 
 Currently the format only allows three specifiers; Platform, Home, and Background.
 These can be seen in the example main.lvl in the github repo.
@@ -111,39 +111,116 @@ Default Background is (in hexadecimal) r->0x10, g->0x10, b->0x10, a->0xff
 WARNGING the format is NOT tolerant to whitespace and does not contain spaces between tokens
 
 
-##### Platform Definition
+#### Platform Definition
 
-example platforms (NOTE: positive y is down on the screen because they are screen coordinates)
+A platform has a few components, namely, shape, color and type. Each
+of these component are defined inline and can be in any order. When
+defining the same attribute twice, the later difinition either fully
+or partially overwrites the previous. This may be useful in the case
+of coloring the platform.
 
-Platform:x-10;y30;w60;h5;corange;tbouyant; // fully defined platform using color specifyer
+(Full platform defualt definition for reference)
 
-Platform:x-200;h3;cblue;tsolid; // partially define platform, all undefined attributes are default
+Platform:x0;y0;w10;h10;cwhite;tsolid;
 
-Platform:x80;y60;w25;h1;r128;g64;b0;a255;tbouncy; // rgba colored platform
+or
 
-These show the possible configurations for a platform
+Platform:x0;y0;w10;h10;r255;g255;b255;a255;tsolid;
 
 
-x -> x coord
+Firstly, the shape of a platform is described by x, y, width and height. It is
+Important to note that the y axis grows downward which is normal for screen
+coordinates, but may be counterintuitive at first.
 
-y -> y coord
+<platform definition>x<int>;y<int>;w<int>;h<int>;
 
-w -> width
+The color of a platform can be described in two different ways. This first
+is RGBA (A is alpha or transparency) that is eight bits deep, which means
+that each value must be in the range [0,255]. The second is by color names.
 
-h -> height
+Color by RGBA
 
-r -> red pixel (8bit)
+<platform definition>r<uint>;g<uint>;b<uint>;a<uint>;
 
-g -> green pixel (8bit)
+Color by name
+<platform definition>c<name>;
 
-b -> blue pixel (8bit)
+The possible color names are
+`red`, `lightgray`, `gray`, `darkgray`, `yellow`, `gold`,
+`orange`, `pink`, `maroon`, `green`, `lime`, `darkgreen`,
+`skyblue`, `blue`, `darkblue`, `purple`, `violet`, `darkpurple`,
+`beige`, `brown`, `darkbrown`, `white`, `black`, `blank`, `magenta`
 
-alpha -> transparency (8bit)
+Finally, the platform type definition which follows a similar pattern
+to color names.
 
-c -> predefined color {red, lightgray, gray, darkgray, yellow, gold, orange, pink, maroon, green, lime, darkgreen, skyblue, blue, darkblue, purple, violet, darkpurple", beige, brown, darkbrown, white, black, blank, magenta }
+<platform definition>t<name>;
 
-t -> platform type { solid, bouyant, bouncy }
+The possible platform types are `solid`, `bouyant`, `bouncy`, `kill`.
 
+Solid platforms collide from all sides and stop a player in the way
+one would espect of a solid block. bouyant platforms are solid on top,
+but allow a player to jump up through it. Bouyant platforms do not collide
+from the sides. Bouncy platforms are like bouyant, but reflect the players
+vertical speed (causing a bounce) from the top and launching them upwards
+from the bottom. Finally, killer platforms kill the player when collided with,
+in a similar way to falling into the abyss.
+
+<!-- example platforms (NOTE: positive y is down on the screen because they are screen coordinates) -->
+
+<!-- Platform:x-10;y30;w60;h5;corange;tbouyant; // fully defined platform using color specifyer -->
+
+<!-- Platform:x-200;h3;cblue;tsolid; // partially define platform, all undefined attributes are default -->
+
+<!-- Platform:x80;y60;w25;h1;r128;g64;b0;a255;tbouncy; // rgba colored platform -->
+
+<!-- These show the possible configurations for a platform -->
+
+
+<!-- x -> x coord -->
+
+<!-- y -> y coord -->
+
+<!-- w -> width -->
+
+<!-- h -> height -->
+
+<!-- r -> red pixel (8bit) -->
+
+<!-- g -> green pixel (8bit) -->
+
+<!-- b -> blue pixel (8bit) -->
+
+<!-- alpha -> transparency (8bit) -->
+
+<!-- c -> predefined color {red, lightgray, gray, darkgray, yellow, gold, orange, pink, maroon, green, lime, darkgreen, skyblue, blue, darkblue, purple, violet, darkpurple", beige, brown, darkbrown, white, black, blank, magenta } -->
+
+<!-- t -> platform type { solid, bouyant, bouncy } -->
+
+#### Home Declaration
+
+The Home level attribute defaults to x0;y0;
+
+Home:x<int>;y<int>;
+
+#### Background Declaration
+
+The Background level attribute is simply a sapecial case for
+color declaration
+
+Background:r<uint>;g<uint>;b<uint>;a<uint>;
+
+or
+
+Background:c<colorname>;
+
+
+
+## Contributors
+
+Aiden Kring (Krayfighter)  - programming & design
+
+Julian Kring (luijejmk) - level editing
 
 
 

@@ -26,7 +26,7 @@
 // pixel red = 128
 // pixel alpha = 255
 // platform type = bouncy
-Platform:x-500;y-10;w300;r128;a255;tbouncy;
+Platform:x-500;y-10;w300;r128;a255;tsolid;
 
 // more examples
 Platform:x-800;y-100;w300;r128;a255;tbouncy;
@@ -40,6 +40,12 @@ Platform:x-400;y100;w800;g50;b50;tkill;cviolet;
 
 // solid wall that separates the tall blue bouncy platforms
 Platform:x-150;y-330;w10;h300;cviolet;tsolid;
+Platform:x-300;y-100;w50;h100;corange;tsolid;
+
+Platform:x-1200;y-400;w400;h3;cdarkblue;tsolid;
+
+Platform:x-800;y-400;w1;h300;cmagenta;tsolid;
+Platform:x-700;y-600;w1;h300;cmagenta;tsolid;
 
 // platforms from previous demo now in .lvl file
 // Platform:x0;y40;w200;h5;cblue;tbouyant;
@@ -50,4 +56,4 @@ Platform:x-150;y-330;w10;h300;cviolet;tsolid;
 // specify background color
 //         red green blue alpha
 Background:r15;g15;b20;a255;
-Home:x-298;y-40;
+Home:x-298;y-200;

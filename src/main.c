@@ -68,9 +68,6 @@ int main(int argc, char **argv) {
     struct dirent *entry = NULL;
     while((entry = readdir(current_dir)) != NULL) {
       size_t name_len = strlen(entry->d_name);
-      for (size_t i = 0; i < 255; i += 1) {
-        fprintf(stderr, "DBG: bytes %lu, %u\n", i, entry->d_name[i]);
-      }
       // size_t name_len = entry->d_name;
       if (str_endswith(entry->d_name, name_len, ".lvl", 4)) {
         char *buffer = malloc(name_len+1);
@@ -106,8 +103,10 @@ int main(int argc, char **argv) {
   }
   #else
   // NOTE this is workaround code for otherwise broken functionality on windows
-  fprintf(stderr, "WARN: level selection currently fails on windows, this is known bug\n");
-  level_filename = "main.lvl";
+  else {
+    fprintf(stderr, "WARN: level selection currently fails on windows, this is known bug\n");
+    level_filename = "main.lvl";
+  }
   #endif
   if (level_filename == NULL) {
     fprintf(stderr, "Error: a file must be selected\n");
@@ -118,8 +117,8 @@ int main(int argc, char **argv) {
   InitWindow(0, 0, "flark");
   MaximizeWindow();
 
-  int window_width = 600;
-  int window_height = 400;
+  int window_width = 1240;
+  int window_height = 720;
   #ifndef WIN32 // NOTE this is part of another workaround, there seem to be glfw linking issues for windows
   // raylib has its own functions for getting window width and height
   // but they aren't working correctly, so I use the glfw functions instead
@@ -139,10 +138,7 @@ int main(int argc, char **argv) {
   Level level = parse_level_stream(level_file);
   fclose(level_file);
 
-  Player player = (Player) {
-    .body = (Rectangle){ .x = level.start_position.x, .y = level.start_position.y, .width = 10.0, .height = 20.0 },
-    .velocity = (Vector2){ .x = 0.0, .y = 0.0 }
-  };
+  Player player = Player_spawn(level.start_position);
 
   Camera2D camera;
   camera.target = (Vector2){ 0.0, 0.0 };
@@ -163,6 +159,7 @@ int main(int argc, char **argv) {
 
   while(!WindowShouldClose()) {
     player.input_state.controller_mode = IsGamepadAvailable(0);
+    Player_do_friction(&player, 0.85);
     Player_step_input_frame(&player); // handle input for player
 
     if (IsKeyPressed(KEY_P)) { frame_mode = !frame_mode; }
@@ -185,14 +182,15 @@ int main(int argc, char **argv) {
     }
 
     // TODO move this into Player_step_input_frame
-    Player_do_friction(&player, 0.85);
     if (IsKeyDown(KEY_S)) {
       Player_apply_gravity(&player, 1.2, 15.0);
     }else {
       Player_apply_gravity(&player, 1.1, 10.0);
     }
-    // touched_ground_last_frame = false;
-    player.touching_ground = false;
+    player.touching_ground = false; // reset whether the player has touched the ground this frame
+    // reset whether the player is sliding this frame, but do not remove prev_speed
+    // because the player may still be sliding on a wall
+    player.slide_state.sliding = SLIDING_NONE;
 
     if (player.body.y > 300.0) {
       player.body.x = level.start_position.x;
@@ -219,6 +217,15 @@ int main(int argc, char **argv) {
       // if (player.velocity.y > 0.0) { player.velocity.y = 0.0; }
       // player.velocity.y -= overlap.height;
       else if (item->type == PLAT_BOUNCY) {
+        CardinalDirection collision = Player_collide_rect(&player, item->body);
+        // switch (collision) {
+        //   case DIR_UP: {}; break;
+        //   case DIR_DOWN: {}; break;
+        //   case DIR_LEFT: {}; break;
+        //   case DIR_RIGHT: {}; break;
+        //   case DIR_NONE: {}; break;
+        //   default: {fprintf(stderr, "ERROR: INVALID CONDITION, unmathed cardinal direction in main.c\n");}
+        // }
         if (overlap.height != 0.0) {
           if (player.velocity.y > 0.0) { player.velocity.y *= -1.0; }
           else { player.velocity.y -= 10.0; }
@@ -229,7 +236,7 @@ int main(int argc, char **argv) {
         CardinalDirection collision = Player_collide_rect(&player, item->body);
         switch (collision) {
           case DIR_UP: {
-            player.body.y = item->body.y - player.body.height - 0.0001;
+            player.body.y = item->body.y - player.body.height;
             player.velocity.y = 0.0;
             player.can_jump = true;
             player.touching_ground = true;
@@ -241,12 +248,20 @@ int main(int argc, char **argv) {
             player.touching_ground = false;
           }; break;
           case DIR_LEFT: {
-            player.body.x = item->body.x - player.body.width - 0.1;
+            if (player.slide_state.prev_speed == 0.0) {
+              player.body.x = item->body.x - player.body.width;
+              player.slide_state.prev_speed = player.velocity.x;
+            }
+            player.slide_state.sliding = SLIDING_LEFT;
             player.velocity.x = 0.0;
             // player.can_jump = false;
           }; break;
           case DIR_RIGHT: {
-            player.body.x = item->body.x + item->body.width + 0.1;
+            if (player.slide_state.prev_speed == 0.0) {
+              player.body.x = item->body.x + item->body.width;
+              player.slide_state.prev_speed = player.velocity.x;
+            }
+            player.slide_state.sliding = SLIDING_RIGHT;
             player.velocity.x = 0.0;
             // player.can_jump = false;
           }; break;
@@ -257,16 +272,24 @@ int main(int argc, char **argv) {
         }
       }else if (item->type == PLAT_KILL) {
         if (overlap.height != 0.0 || overlap.width != 0.0) {
-          player.body.x = level.start_position.x;
-          player.body.y = level.start_position.y;
-          player.velocity.x = 0.0;
-          player.velocity.y = 0.0;
-          player.can_jump = false;
-          player.touching_ground = false;
+          player = Player_spawn(level.start_position);
+          // player.body.x = level.start_position.x;
+          // player.body.y = level.start_position.y;
+          // player.velocity.x = 0.0;
+          // player.velocity.y = 0.0;
+          // player.can_jump = false;
+          // player.touching_ground = false;
         }
       }
       else { fprintf(stderr, "WARN: unimplemented Platform type -> %u", item->type); }
     });
+
+    // if the player has not collided with a wall this frame, then reset
+    // the stored speed in the wall slide indicating that the player is truly
+    // no longer sliding
+    if (player.slide_state.sliding == SLIDING_NONE) {
+      player.slide_state.prev_speed = 0.0;
+    }
 
     Player_move(&player);
     
@@ -293,7 +316,6 @@ int main(int argc, char **argv) {
 
     // halt at the end of each frame when operating in frame-by-frame mode
     // also only works with POSIX APIs
-    // #ifndef WIN32
     if (frame_mode) {
       printf("INFO: press p then Enter into terminal to unpause\n");
 
@@ -307,7 +329,6 @@ int main(int argc, char **argv) {
           break;
         }
         sleep_millis(1);
-        // usleep(1000);
       }
     }
     // #endif

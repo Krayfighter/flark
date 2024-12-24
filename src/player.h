@@ -12,14 +12,27 @@ typedef struct {
   bool controller_mode;
 } InputBuffer;
 
+typedef enum {
+  SLIDING_LEFT,
+  SLIDING_RIGHT,
+  SLIDING_NONE,
+} WallSlide;
+
+typedef struct {
+  WallSlide sliding;
+  float prev_speed;
+} WallslideState;
+
 typedef struct {
   Rectangle body;
   Vector2 velocity;
   bool can_jump;
   bool touching_ground;
+  WallslideState slide_state;
   InputBuffer input_state;
 } Player;
 
+Player Player_spawn(Vector2 start_pos);
 void Player_step_input_frame(Player *self);
 void Player_apply_gravity(Player *self, float strength, float terminal_velocity);
 void Player_move(Player *self);
