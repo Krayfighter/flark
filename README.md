@@ -22,7 +22,7 @@ named main.lvl
 [raylib](https://www.raylib.com/)
 it is preferred to have raylib source built alongside
 Flark. This is done by downloading raylib 5.5's [github release](https://github.com/raysan5/raylib/archive/refs/tags/5.5.zip)
-and placing the full contents unziped under <flark dir>/raylib.
+and placing the full contents unziped under \<flark dir\>/raylib.
 
 
 ### Zig (Preferred)
@@ -132,7 +132,7 @@ Firstly, the shape of a platform is described by x, y, width and height. It is
 Important to note that the y axis grows downward which is normal for screen
 coordinates, but may be counterintuitive at first.
 
-<platform definition>x<int>;y<int>;w<int>;h<int>;
+\<platform definition\>x\<int\>;y\<int\>;w\<int\>;h\<int\>;
 
 The color of a platform can be described in two different ways. This first
 is RGBA (A is alpha or transparency) that is eight bits deep, which means
@@ -140,10 +140,10 @@ that each value must be in the range [0,255]. The second is by color names.
 
 Color by RGBA
 
-<platform definition>r<uint>;g<uint>;b<uint>;a<uint>;
+\<platform definition\>r\<uint\>;g\<uint\>;b\<uint\>;a\<uint\>;
 
 Color by name
-<platform definition>c<name>;
+\<platform definition\>c\<name\>;
 
 The possible color names are
 `red`, `lightgray`, `gray`, `darkgray`, `yellow`, `gold`,
@@ -154,7 +154,7 @@ The possible color names are
 Finally, the platform type definition which follows a similar pattern
 to color names.
 
-<platform definition>t<name>;
+\<platform definition\>t\<name\>;
 
 The possible platform types are `solid`, `bouyant`, `bouncy`, `kill`.
 
@@ -166,53 +166,22 @@ vertical speed (causing a bounce) from the top and launching them upwards
 from the bottom. Finally, killer platforms kill the player when collided with,
 in a similar way to falling into the abyss.
 
-<!-- example platforms (NOTE: positive y is down on the screen because they are screen coordinates) -->
-
-<!-- Platform:x-10;y30;w60;h5;corange;tbouyant; // fully defined platform using color specifyer -->
-
-<!-- Platform:x-200;h3;cblue;tsolid; // partially define platform, all undefined attributes are default -->
-
-<!-- Platform:x80;y60;w25;h1;r128;g64;b0;a255;tbouncy; // rgba colored platform -->
-
-<!-- These show the possible configurations for a platform -->
-
-
-<!-- x -> x coord -->
-
-<!-- y -> y coord -->
-
-<!-- w -> width -->
-
-<!-- h -> height -->
-
-<!-- r -> red pixel (8bit) -->
-
-<!-- g -> green pixel (8bit) -->
-
-<!-- b -> blue pixel (8bit) -->
-
-<!-- alpha -> transparency (8bit) -->
-
-<!-- c -> predefined color {red, lightgray, gray, darkgray, yellow, gold, orange, pink, maroon, green, lime, darkgreen, skyblue, blue, darkblue, purple, violet, darkpurple", beige, brown, darkbrown, white, black, blank, magenta } -->
-
-<!-- t -> platform type { solid, bouyant, bouncy } -->
-
 #### Home Declaration
 
 The Home level attribute defaults to x0;y0;
 
-Home:x<int>;y<int>;
+Home:x\<int\>;y\<int\>;
 
 #### Background Declaration
 
 The Background level attribute is simply a sapecial case for
 color declaration
 
-Background:r<uint>;g<uint>;b<uint>;a<uint>;
+Background:r\<uint\>;g\<uint\>;b\<uint\>;a\<uint\>;
 
 or
 
-Background:c<colorname>;
+Background:c\<colorname\>;
 
 
 
