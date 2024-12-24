@@ -19,9 +19,9 @@ named main.lvl
 
 ### Dependencies
 
-(raylib)[https://www.raylib.com/]
+[raylib](https://www.raylib.com/)
 it is preferred to have raylib source built alongside
-Flark. This is done by downloading raylib 5.5's (github release)[https://github.com/raysan5/raylib/archive/refs/tags/5.5.zip]
+Flark. This is done by downloading raylib 5.5's [github release](https://github.com/raysan5/raylib/archive/refs/tags/5.5.zip)
 and placing the full contents unziped under <flark dir>/raylib.
 
 
@@ -31,7 +31,7 @@ Although Flark is written in C, it uses zig for its preferred
 build because of zig's cross-platform and cross-compiling support.
 
 Zig works easily and consistently across platforms and can be downloaded 
-on its (website)[https://ziglang.org/download/]. It should be installed to
+on its [website](https://ziglang.org/download/). It should be installed to
 system directories or to the flark directory.
 
 #### Step 1 - build raylib
@@ -79,7 +79,7 @@ as ```flark``` and for windows ```flark_w32``` (the .exe may need to be added ma
 
 ### Manual Build (for when things go wrong)
 
-for building raylib, see its (README)[https://github.com/raysan5/raylib]
+for building raylib, see its [README](https://github.com/raysan5/raylib)
 
 then build flark with something like (windows)
 ```<C Compiler> src/main.c src/level_loader.c src/player.c -L<raylib lib dir> -I<raylib incl dir> -I./plustypes/src -lm -lopengl32 -lwinmm -lgdi32 -o flark```
