@@ -25,14 +25,17 @@ void Player_apply_gravity(Player *self, float strength, float terminal_velocity)
 void Player_move(Player *self);
 void Player_do_friction(Player *self, float friction);
 void Player_move_analogue(Player *self, bool touching_ground, float input);
-void Player_collide_rect(Player *self, Rectangle rect);
 
 typedef enum {
-  MOVE_RIGHT,
-  MOVE_LEFT,
-} MovementDireciton;
-void player_move_direction(Player *self, MovementDireciton dir, bool touching_ground);
-
+  DIR_UP,
+  DIR_DOWN,
+  DIR_RIGHT,
+  DIR_LEFT,
+  DIR_NONE,
+} CardinalDirection;
+void player_move_direction(Player *self, CardinalDirection dir, bool touching_ground);
+// returns the direction from which the player collides with the rect
+CardinalDirection Player_collide_rect(Player *self, Rectangle rect);
 // void InputBuffer_step_frame(InputBuffer *self, Player *player, bool controller_mode);
 
 

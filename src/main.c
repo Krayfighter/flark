@@ -226,35 +226,35 @@ int main(int argc, char **argv) {
           player.touching_ground = true;
         }
       }else if(item->type == PLAT_SOLID) {
-        // rectangles_collide_axis(&player, item->body);
-        Player_collide_rect(&player, item->body);
-        // bool in_collision_range = (
-        //   player.body.x + player.body.width + player.velocity.x > item->body.x &&
-        //   player.body.x + player.velocity.x < item->body.x + item->body.width
-        // );
-        // if (in_collision_range) {
-        // // if (true) {
-        //   bool player_above = player.body.y < item->body.y - item->body.height;
-        //   bool next_frame_player_above = player.body.y + player.body.height + player.velocity.y <= item->body.y - item->body.height;
-        //   bool will_collide_from_top = player_above && !next_frame_player_above;
-
-        //   bool player_below = player.body.y > item->body.y;
-        //   bool next_frame_player_below = player.body.y + player.velocity.y > item->body.y;
-        //   bool will_collide_from_bottom = player_below && !next_frame_player_below;
-
-        //   if (will_collide_from_top) {
-        //     // do collision
-        //     player.velocity.y = 0.0;
-        //     player.body.y = item->body.y - player.body.height;
-        //     player.can_jump = true;
-        //   player.touching_ground = true;
-        //   }else if (will_collide_from_bottom) {
-        //     // do collision
-        //     player.velocity.y = 0.0;
-        //     player.body.y = item->body.y + item->body.height;
-        //     player.can_jump = true;
-        //   }
-        // }
+        CardinalDirection collision = Player_collide_rect(&player, item->body);
+        switch (collision) {
+          case DIR_UP: {
+            player.body.y = item->body.y - player.body.height - 0.0001;
+            player.velocity.y = 0.0;
+            player.can_jump = true;
+            player.touching_ground = true;
+          }; break;
+          case DIR_DOWN: {
+            player.body.y = item->body.y + item->body.height;
+            player.velocity.y = 0.0;
+            player.can_jump = true;
+            player.touching_ground = false;
+          }; break;
+          case DIR_LEFT: {
+            player.body.x = item->body.x - player.body.width - 0.1;
+            player.velocity.x = 0.0;
+            // player.can_jump = false;
+          }; break;
+          case DIR_RIGHT: {
+            player.body.x = item->body.x + item->body.width + 0.1;
+            player.velocity.x = 0.0;
+            // player.can_jump = false;
+          }; break;
+          case DIR_NONE: {}; break;
+          default: {
+            fprintf(stderr, "ERROR: INVALID CONDITION -> unmatched CardinalDirection in main.c\n");
+          }; break;
+        }
       }else if (item->type == PLAT_KILL) {
         if (overlap.height != 0.0 || overlap.width != 0.0) {
           player.body.x = level.start_position.x;
