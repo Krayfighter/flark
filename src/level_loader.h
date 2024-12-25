@@ -34,6 +34,7 @@ typedef struct {
   float player_jump_velocity;
   float player_acceleration;
   float player_max_speed;
+  float abyss_height;
 } Level;
 
 void Platform_DBG(Platform *self, FILE *output_stream);

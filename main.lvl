@@ -64,3 +64,7 @@ MoveSpeed:10.0;
 Gravity:1.1;
 Acceleration:1.0;
 Jump:20.0;
+
+// Default abyss height
+
+Abyss:300.0;

@@ -121,11 +121,11 @@ of coloring the platform.
 
 (Full platform defualt definition for reference)
 
-Platform:x0;y0;w10;h10;cwhite;tsolid;
+```Platform:x0;y0;w10;h10;cwhite;tsolid;```
 
 or
 
-Platform:x0;y0;w10;h10;r255;g255;b255;a255;tsolid;
+```Platform:x0;y0;w10;h10;r255;g255;b255;a255;tsolid;```
 
 
 Firstly, the shape of a platform is described by x, y, width and height. It is
@@ -170,18 +170,44 @@ in a similar way to falling into the abyss.
 
 The Home level attribute defaults to x0;y0;
 
-Home:x\<int\>;y\<int\>;
+```Home:x<int>;y<int>;```
 
 #### Background Declaration
 
 The Background level attribute is simply a sapecial case for
 color declaration
 
-Background:r\<uint\>;g\<uint\>;b\<uint\>;a\<uint\>;
+```Background:r<uint>;g<uint>;b<uint>;a<uint>;```
 
 or
 
-Background:c\<colorname\>;
+```Background:c<colorname>;```
+
+
+#### Player Attribute Declarations
+
+The player has a few tunable attributes to control the feel of
+the movement in the level. These attributes are gravity, acceleration,
+max movement speed, and jump velocity. Each of these attributes, unlike
+the previous declaration types, accept floating point values, and do
+not require a key like `x-5;`.
+
+```Gravity:<float>;```
+
+```Acceleration:<float>;```
+
+```MoveSpeed:<float>;```
+
+```Jump:<float>;```
+
+
+#### Abyss Declaration
+
+The Abyss is a globally defined y value that, when passed
+kills the player. Its declaration is similar the the player
+attributes.
+
+```Abyss:<float>;```
 
 
 

@@ -179,7 +179,7 @@ int main(int argc, char **argv) {
     // because the player may still be sliding on a wall
     player.slide_state.sliding = SLIDING_NONE;
 
-    if (player.body.y > 300.0) {
+    if (player.body.y > level.abyss_height) {
       player.body.x = level.start_position.x;
       player.body.y = level.start_position.y;
       player.velocity = (Vector2){ .x = 0.0, .y = 0.0 };
@@ -285,7 +285,8 @@ int main(int argc, char **argv) {
           }; break;
         }
       }else if (item->type == PLAT_KILL) {
-        if (overlap.height != 0.0 || overlap.width != 0.0) {
+        CardinalDirection collision = Player_collide_rect(&player, item->body);
+        if (collision != DIR_NONE) {
           player = Player_spawn(&level);
         }
       }

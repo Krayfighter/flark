@@ -141,6 +141,7 @@ Level parse_level_stream(FILE *stream) {
     .player_acceleration = 1.0,
     .player_max_speed = 10.0,
     .player_jump_velocity = 20.0,
+    .abyss_height = 300.0,
   };
 
   size_t line_number = 0;
@@ -282,6 +283,15 @@ Level parse_level_stream(FILE *stream) {
         continue;
       }
       self.player_jump_velocity = jump_velocity;
+    }
+    else if (string_starts(line_buffer, buffer_len, "Abyss:", 6)) {
+      float abyss_height = NAN;
+      sscanf(line_buffer, "Abyss:%f;", &abyss_height);
+      if (abyss_height == NAN) {
+        fprintf(stderr, "WARN: failed to parse abyss height on line %lu\n", line_number);
+        continue;
+      }
+      self.abyss_height= abyss_height;
     }
     else {
       fprintf(stderr, "Error: syntax error on line %lu, line must start with a directive (skipping this line)\n", line_number);
