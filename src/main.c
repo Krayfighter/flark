@@ -188,13 +188,30 @@ int main(int argc, char **argv) {
       Rectangle overlap = GetCollisionRec(player.body, item->body);
       // if (overlap.height != 0.0) {
       if (item->type == PLAT_BOUYANT) {
-        if (overlap.height != 0.0) {
-          if (player.velocity.y > 0.0) { player.velocity.y = 0.0; player.body.y = item->body.y - player.body.height; }
-          else{ player.velocity.y -= overlap.height; }
-          player.can_jump = true;
-          // touched_ground_last_frame = true;
-          player.touching_ground = true;
+        CardinalDirection collision = Player_collide_rect(&player, item->body);
+        switch (collision) {
+          case DIR_UP: {
+            player.velocity.y = 0.0;
+            player.body.y = item->body.y - player.body.height;
+            player.touching_ground = true;
+            player.can_jump = true;
+          }; break;
+          case DIR_DOWN: {}; break;
+          case DIR_LEFT: {}; break;
+          case DIR_RIGHT: {}; break;
+          case DIR_NONE: {}; break;
+          default: { fprintf(stderr, "ERROR: INVALID CONDITION, invalid direction in main.c"); };
         }
+        if (overlap.height != 0.0) {
+          player.velocity.y -= 5.0;
+        }
+        // if (overlap.height != 0.0) {
+        //   if (player.velocity.y > 0.0) { player.velocity.y = 0.0; player.body.y = item->body.y - player.body.height; }
+        //   else{ player.velocity.y -= overlap.height; }
+        //   player.can_jump = true;
+        //   // touched_ground_last_frame = true;
+        //   player.touching_ground = true;
+        // }
       }
       // reverse bounce
       // if (player.velocity.y > 0.0) { player.velocity.y = 0.0; }
@@ -308,7 +325,6 @@ int main(int argc, char **argv) {
     EndDrawing();
 
     // halt at the end of each frame when operating in frame-by-frame mode
-    // also only works with POSIX APIs
     if (frame_mode) {
       printf("INFO: press p then Enter into terminal to unpause\n");
 
