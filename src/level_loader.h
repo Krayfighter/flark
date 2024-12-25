@@ -27,6 +27,9 @@ typedef struct {
   Vector2 start_position;
   List_Platform platforms;
   Color background_color;
+  // float player_gravity;
+  // float player_acceleration;
+  // float player_max_speed;
 } Level;
 
 void Platform_DBG(Platform *self, FILE *output_stream);

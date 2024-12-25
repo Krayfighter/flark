@@ -146,7 +146,7 @@ Level parse_level_stream(FILE *stream) {
       Platform plat = (Platform) {
         .body = (Rectangle){ .x = 0.0, .y = 0.0, .width = 10.0, .height = 10.0 },
         .color = (Color){ .r = 255, .g = 255, .b = 255, .a = 255 },
-        .type = PLAT_BOUYANT
+        .type = PLAT_SOLID
       };
       char *token = strtok(line_buffer+9, ";");
 
