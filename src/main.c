@@ -151,11 +151,11 @@ int main(int argc, char **argv) {
 
   SetTargetFPS(60);
 
-  // bool touched_ground_last_frame = false;
-  // bool controller_mode = false;
-
-
   fprintf(stderr, "DBG: gamepad name %s\n", GetGamepadName(0));
+
+  char position_debug_string[128];
+  Font font = LoadFont("./GeistMono-Medium.otf");
+
 
   while(!WindowShouldClose()) {
     player.input_state.controller_mode = IsGamepadAvailable(0);
@@ -165,20 +165,6 @@ int main(int argc, char **argv) {
     if (IsKeyPressed(KEY_P)) { frame_mode = !frame_mode; }
     if (IsKeyPressed(KEY_R) && !first_frame) {
       goto load_file;
-      // fclose(level_file);
-      // level_file = fopen(level_filename, "r");
-      // if (level_file == NULL) {
-      //   fprintf(stderr, "Error: failed to reopen file -> %s\n", strerror(errno));
-      //   exit(-1);
-      // }
-      // level = parse_level_stream(level_file);
-      // fclose(level_file);
-      // player.body.x = level.start_position.x;
-      // player.body.y = level.start_position.y;
-      // player.velocity = (Vector2){ .x = 0.0, .y = 0.0 };
-      // player.can_jump = false;
-      // player.touching_ground = false;
-      // continue;
     }
 
     // TODO move this into Player_step_input_frame
@@ -218,20 +204,29 @@ int main(int argc, char **argv) {
       // player.velocity.y -= overlap.height;
       else if (item->type == PLAT_BOUNCY) {
         CardinalDirection collision = Player_collide_rect(&player, item->body);
-        // switch (collision) {
-        //   case DIR_UP: {}; break;
-        //   case DIR_DOWN: {}; break;
-        //   case DIR_LEFT: {}; break;
-        //   case DIR_RIGHT: {}; break;
-        //   case DIR_NONE: {}; break;
-        //   default: {fprintf(stderr, "ERROR: INVALID CONDITION, unmathed cardinal direction in main.c\n");}
-        // }
-        if (overlap.height != 0.0) {
-          if (player.velocity.y > 0.0) { player.velocity.y *= -1.0; }
-          else { player.velocity.y -= 10.0; }
-          player.can_jump = true;
-          player.touching_ground = true;
+        switch (collision) {
+          case DIR_UP: {
+            if (IsKeyDown(KEY_SPACE)) {
+              // float collision_distance = player.body.y - item->body.y - player.body.height;
+              player.body.y = item->body.y - player.body.height;
+              player.velocity.y = -25.0;
+            }else { player.velocity.y *= -1.0; }
+          }; break;
+          case DIR_DOWN: { player.velocity.y = -20.0; }; break;
+          case DIR_LEFT: {}; break;
+          case DIR_RIGHT: {}; break;
+          case DIR_NONE: {}; break;
+          default: {fprintf(stderr, "ERROR: INVALID CONDITION, unmathed cardinal direction in main.c\n");}
         }
+        if (overlap.height != 0.0) {
+          player.velocity.y -= 5.0;
+        }
+        // if (overlap.height != 0.0) {
+        //   if (player.velocity.y > 0.0) { player.velocity.y *= -1.0; }
+        //   else { player.velocity.y -= 10.0; }
+        //   player.can_jump = true;
+        //   player.touching_ground = true;
+        // }
       }else if(item->type == PLAT_SOLID) {
         CardinalDirection collision = Player_collide_rect(&player, item->body);
         switch (collision) {
@@ -273,12 +268,6 @@ int main(int argc, char **argv) {
       }else if (item->type == PLAT_KILL) {
         if (overlap.height != 0.0 || overlap.width != 0.0) {
           player = Player_spawn(level.start_position);
-          // player.body.x = level.start_position.x;
-          // player.body.y = level.start_position.y;
-          // player.velocity.x = 0.0;
-          // player.velocity.y = 0.0;
-          // player.can_jump = false;
-          // player.touching_ground = false;
         }
       }
       else { fprintf(stderr, "WARN: unimplemented Platform type -> %u", item->type); }
@@ -311,6 +300,10 @@ int main(int argc, char **argv) {
       }
     } )
     EndMode2D();
+
+    snprintf(position_debug_string, 128, "Character Position: {%f},{%f}", player.body.x, player.body.y);
+    // DrawText(position_debug_string, 5, 5, 15, RED);
+    DrawTextEx(font, position_debug_string, (Vector2){ .x = 5, .y = 5 }, 15, 1, RED);
 
     EndDrawing();
 
