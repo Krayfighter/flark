@@ -1,4 +1,5 @@
 
+#include "pt_error.h"
 #include "stdio.h"
 #include "string.h"
 #include "stdlib.h"
@@ -8,6 +9,7 @@
 #include "raylib.h"
 
 #include "plustypes.h"
+#include "error.h"
 #include "level_loader.h"
 
 
@@ -97,7 +99,9 @@ int32_t parse_int(char *string, size_t len) {
   int32_t number = 0;
   // size_t index = 0;
   for (size_t iter = 0; iter < new_len; iter += 1) {
-    number += (powl(10, (new_len-iter - 1))) * char_number(new_string[iter]);
+    int32_t chr_num = char_number(new_string[iter]);
+    if (chr_num == -1) { errno = EINVAL; }
+    number += (powl(10, (new_len-iter - 1))) * chr_num;
     // index += 1;
   }
   return number * positive;
@@ -133,6 +137,10 @@ Level parse_level_stream(FILE *stream) {
     .start_position = (Vector2){ .x = 0.0, .y = 0.0},
     .platforms = List_Platform_new(8),
     .background_color = (Color){ .r = 0x10, .g = 0x10, .b = 0x10, .a = 0xff },
+    .player_gravity = 1.1,
+    .player_acceleration = 1.0,
+    .player_max_speed = 10.0,
+    .player_jump_velocity = 20.0,
   };
 
   size_t line_number = 0;
@@ -238,6 +246,42 @@ Level parse_level_stream(FILE *stream) {
         }
         token = strtok(NULL, ";");
       }
+    }
+    else if (string_starts(line_buffer, buffer_len, "Gravity:", 8)) {
+      float gravity = -1.0;
+      sscanf(line_buffer, "Gravity:%f;", &gravity);
+      if (gravity < 0.0) {
+        fprintf(stderr, "WARN: failed to parse player gravity on line %lu\n", line_number);
+        continue;
+      }
+      self.player_gravity = gravity;
+    }
+    else if (string_starts(line_buffer, buffer_len, "Acceleration:", 13)) {
+      float acceleration = -1.0;
+      sscanf(line_buffer, "Acceleration:%f;", &acceleration);
+      if (acceleration < 0.0) {
+        fprintf(stderr, "WARN: failed to parse player acceleration on line %lu\n", line_number);
+        continue;
+      }
+      self.player_acceleration = acceleration;
+    }
+    else if (string_starts(line_buffer, buffer_len, "MoveSpeed:", 10)) {
+      float max_move_speed = -1.0;
+      sscanf(line_buffer, "MoveSpeed:%f;", &max_move_speed);
+      if (max_move_speed < 0.0) {
+        fprintf(stderr, "WARN: failed to parse player max run speed on line %lu\n", line_number);
+        continue;
+      }
+      self.player_max_speed = max_move_speed;
+    }
+    else if (string_starts(line_buffer, buffer_len, "Jump:", 5)) {
+      float jump_velocity = -1.0;
+      sscanf(line_buffer, "Jump:%f;", &jump_velocity);
+      if (jump_velocity < 0.0) {
+        fprintf(stderr, "WARN: failed to parse player jump velocity on line %lu\n", line_number);
+        continue;
+      }
+      self.player_jump_velocity = jump_velocity;
     }
     else {
       fprintf(stderr, "Error: syntax error on line %lu, line must start with a directive (skipping this line)\n", line_number);

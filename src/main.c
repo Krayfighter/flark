@@ -22,6 +22,7 @@
 #include "external/glfw/include/GLFW/glfw3.h"
 
 #include "plustypes.h"
+#include "pt_error.h"
 #include "level_loader.h"
 #include "player.h"
 
@@ -77,10 +78,10 @@ int main(int argc, char **argv) {
     }
     closedir(current_dir);
 
-    if (level_names.item_count == 0) {
-      fprintf(stderr, "Error: no level files found in current directory, make a .lvl file or download the example from https://github.com/Krayfighter/flark/blob/master/main.lvl\n");
-      exit(-1);
-    }
+    expect(
+      (level_names.item_count != 0),
+      "no level files found in current directory, make a .lvl file or download the example from https://github.com/Krayfighter/flark/blob/master/main.lvl"
+    );
     for (size_t i = 0; i < level_names.item_count; i += 1) {
       printf("(%lu): |%s|\n", i, List_CharString_get(&level_names, i)->string);
     }
@@ -95,10 +96,10 @@ int main(int argc, char **argv) {
     int32_t index = parse_int(input_buffer, strlen(input_buffer));
     if (index < 0) { fprintf(stderr, "WARN: ignoring sign of negative number: %i index\n", index); }
     index = abs(index);
-    if (index > level_names.item_count) {
-      fprintf(stderr, "Error: index out of range: %i\n", index);
-      exit(-1);
-    }
+    expect(
+      (index < level_names.item_count),
+      "index out of range, (please select a file by the numbner displayed to its left)"
+    );
     level_filename = List_CharString_get(&level_names, index)->string;
   }
   #else
@@ -108,10 +109,7 @@ int main(int argc, char **argv) {
     level_filename = "main.lvl";
   }
   #endif
-  if (level_filename == NULL) {
-    fprintf(stderr, "Error: a file must be selected\n");
-    exit(-1);
-  }
+  expect((level_filename != NULL), "a file must be selected");
 
   SetConfigFlags(FLAG_WINDOW_MAXIMIZED | FLAG_WINDOW_RESIZABLE);
   InitWindow(0, 0, "flark");
@@ -129,16 +127,16 @@ int main(int argc, char **argv) {
   printf("\n\n\n"); // put some space between raylib init logging
 
   load_file:
+  errno = 0;
   level_file = fopen(level_filename, "r");
-  if (level_file == NULL) {
-    fprintf(stderr, "Error: unable to open file -> %s\n", strerror(errno));
-    exit(-1);
-  }
+  expect_errno("unable to open file");
+  expect((level_file != NULL), "unable to open file");
+
   // FILE *level_file = fopen("main.lvl", "r");
   Level level = parse_level_stream(level_file);
   fclose(level_file);
 
-  Player player = Player_spawn(level.start_position);
+  Player player = Player_spawn(&level);
 
   Camera2D camera;
   camera.target = (Vector2){ 0.0, 0.0 };
@@ -169,9 +167,12 @@ int main(int argc, char **argv) {
 
     // TODO move this into Player_step_input_frame
     if (IsKeyDown(KEY_S)) {
-      Player_apply_gravity(&player, 1.2, 15.0);
+      // TODO fix ground pound and make it better
+      // Player_apply_gravity(&player, 1.2, 15.0);
+      Player_apply_gravity(&player, 15.0);
     }else {
-      Player_apply_gravity(&player, 1.1, 10.0);
+      // Player_apply_gravity(&player, 1.1, 10.0);
+      Player_apply_gravity(&player, 10.0);
     }
     player.touching_ground = false; // reset whether the player has touched the ground this frame
     // reset whether the player is sliding this frame, but do not remove prev_speed
@@ -226,7 +227,8 @@ int main(int argc, char **argv) {
             if (IsKeyDown(KEY_SPACE)) {
               // float collision_distance = player.body.y - item->body.y - player.body.height;
               player.body.y = item->body.y - player.body.height;
-              player.velocity.y = -25.0;
+              // player.velocity.y = -player.jump_velocity - (player.jump_velocity * (1.0/5.0));
+              player.velocity.y = (-6.0 / 5.0) * player.jump_velocity;
             }else { player.velocity.y *= -1.0; }
           }; break;
           case DIR_DOWN: { player.velocity.y = -20.0; }; break;
@@ -284,7 +286,7 @@ int main(int argc, char **argv) {
         }
       }else if (item->type == PLAT_KILL) {
         if (overlap.height != 0.0 || overlap.width != 0.0) {
-          player = Player_spawn(level.start_position);
+          player = Player_spawn(&level);
         }
       }
       else { fprintf(stderr, "WARN: unimplemented Platform type -> %u", item->type); }

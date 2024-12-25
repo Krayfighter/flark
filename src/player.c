@@ -5,14 +5,14 @@
 #include "raylib.h"
 #include "raymath.h"
 
-#include  "player.h"
+#include "player.h"
+#include "level_loader.h"
 
-#include "stdio.h"
 
 
-Player Player_spawn(Vector2 start_pos) {
+Player Player_spawn(Level *level) {
   return (Player) {
-    .body = (Rectangle){ .x = start_pos.x, .y = start_pos.y, .width = 10, .height = 20 },
+    .body = (Rectangle){ .x = level->start_position.x, .y = level->start_position.y, .width = 10, .height = 20 },
     .velocity = (Vector2){ .x = 0.0, .y = 0.0 },
     .can_jump = false,
     .touching_ground = false,
@@ -21,6 +21,10 @@ Player Player_spawn(Vector2 start_pos) {
       .sliding = SLIDING_NONE,
       .prev_speed = 0.0,
     },
+    .gravity = level->player_gravity,
+    .jump_velocity = level->player_jump_velocity,
+    .acceleration = level->player_acceleration,
+    .max_speed = level->player_max_speed,
   };
 }
 
@@ -33,7 +37,8 @@ void Player_step_input_frame(Player *self) {
     if (IsKeyDown(KEY_A)) { player_move_direction(self, DIR_LEFT, self->touching_ground); }
     if (IsKeyPressed(KEY_SPACE)) {
       if (self->can_jump) {
-        self->velocity.y -= 20.0;
+        // self->velocity.y -= 20.0;
+        self->velocity.y -= self->jump_velocity;
         self->can_jump = false;
       } else if (self->slide_state.sliding != SLIDING_NONE) {
         self->velocity.x = self->slide_state.prev_speed * -1.0;
@@ -42,7 +47,7 @@ void Player_step_input_frame(Player *self) {
           if (self->slide_state.sliding == SLIDING_LEFT) { self->velocity.x *= -1.0; }
         }
         self->slide_state.prev_speed = 0.0; // This also indicates that the player is no longer sliding
-        self->velocity.y -= 20.0;
+        self->velocity.y -= self->jump_velocity;
         self->can_jump = false;
       }
     }
@@ -67,17 +72,17 @@ void Player_step_input_frame(Player *self) {
   }
 }
 
-void Player_apply_gravity(Player *self, float acceleration, float terminal_velocity) {
+void Player_apply_gravity(Player *self, float terminal_velocity) {
   // const float G = 1.1;
   // float G = s
   if (self->velocity.y < 0.0) {
-    self->velocity.y = (self->velocity.y / acceleration) + 0.2;
+    self->velocity.y = (self->velocity.y / self->gravity) + 0.2;
   }else {
-    self->velocity.y = (self->velocity.y * acceleration) + 0.2;
+    self->velocity.y = (self->velocity.y * self->gravity) + 0.2;
   }
   // self->velocity.y -= (self->velocity.y + 0.01);
   // if (self->velocity.y > terminal_velocity) { self->velocity.y = terminal_velocity; }
-  if (self->velocity.y + acceleration > terminal_velocity) { self->velocity.y = terminal_velocity; }
+  if (self->velocity.y + self->acceleration > terminal_velocity) { self->velocity.y = terminal_velocity; }
   // self->velocity.y += acceleration;
   // if (self->velocity.y > terminal_velocity) {
   //   self->velocity.y = terminal_velocity;
@@ -94,21 +99,22 @@ void Player_do_friction(Player *self, float friction) {
 }
 
 void Player_move_analogue(Player *self, bool touching_ground, float input) {
-  const float PLAYER_MAX_SPEED = 10.0;
-  const float PLAYER_ACCELERATION = 1.0;
-  // const float PLAYER_ACCELERATION = 0.3;
-  const float PLAYER_AIR_ACCELERATION = 0.3;
+  // const float PLAYER_MAX_SPEED = 10.0;
+  // const float PLAYER_ACCELERATION = 1.0;
+  // // const float PLAYER_ACCELERATION = 0.3;
+  // const float PLAYER_AIR_ACCELERATION = 0.3;
+  const float player_air_acceleration = self->acceleration / 3.0;
 
 
   int move_sign = 1;
   if (self->velocity.x < 0.0) { move_sign = -1; }
 
-  if (fabsf(self->velocity.x) > PLAYER_MAX_SPEED) { self->velocity.x = PLAYER_MAX_SPEED * move_sign; }
+  if (fabsf(self->velocity.x) > self->max_speed) { self->velocity.x = self->max_speed * move_sign; }
   else {
     if (self->touching_ground) {
-      self->velocity.x += input * PLAYER_ACCELERATION;
+      self->velocity.x += input * self->acceleration;
     }else {
-      self->velocity.x += input * PLAYER_AIR_ACCELERATION;
+      self->velocity.x += input * player_air_acceleration;
     }
   }
 

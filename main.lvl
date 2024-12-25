@@ -57,3 +57,10 @@ Platform:x-700;y-600;w1;h300;cmagenta;tsolid;
 //         red green blue alpha
 Background:r15;g15;b20;a255;
 Home:x-298;y-200;
+
+// Default definitions for player attributes
+
+MoveSpeed:10.0;
+Gravity:1.1;
+Acceleration:1.0;
+Jump:20.0;

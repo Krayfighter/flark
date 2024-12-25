@@ -5,6 +5,9 @@
 #include "plustypes.h"
 
 
+#ifndef LEVEL_LOADER_H
+#define LEVEL_LOADER_H
+
 typedef enum {
   PLAT_BOUNCY,
   PLAT_BOUYANT,
@@ -27,9 +30,10 @@ typedef struct {
   Vector2 start_position;
   List_Platform platforms;
   Color background_color;
-  // float player_gravity;
-  // float player_acceleration;
-  // float player_max_speed;
+  float player_gravity;
+  float player_jump_velocity;
+  float player_acceleration;
+  float player_max_speed;
 } Level;
 
 void Platform_DBG(Platform *self, FILE *output_stream);
@@ -40,4 +44,5 @@ bool TEST_char_numbers(FILE *logger);
 bool TEST_parse_int(FILE *logger);
 #endif
 
+#endif
 
