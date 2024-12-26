@@ -167,7 +167,7 @@ Level parse_level_stream(FILE *stream) {
         int32_t value = parse_int(token+1, item_len-1);
         switch (token[0]) {
           case 'x': plat.body.x = value; break;
-          case 'y': plat.body.y = value; break;
+          case 'y': plat.body.y = -value; break;
           case 'w': plat.body.width = value; break;
           case 'h': plat.body.height = value; break;
           case 'r': plat.color.r = value; break;
@@ -227,7 +227,7 @@ Level parse_level_stream(FILE *stream) {
         int32_t value = parse_int(token+1, strlen(token+1));
         switch (token[0]) {
           case 'x': self.start_position.x = value; break;
-          case 'y': self.start_position.y = value; break;
+          case 'y': self.start_position.y = -value; break;
           default: fprintf(stderr, "WARN: unrecognized directive on line %lu\n", line_number);
         }
         token = strtok(NULL, ";");
@@ -291,7 +291,7 @@ Level parse_level_stream(FILE *stream) {
         fprintf(stderr, "WARN: failed to parse abyss height on line %lu\n", line_number);
         continue;
       }
-      self.abyss_height= abyss_height;
+      self.abyss_height = -abyss_height;
     }
     else {
       fprintf(stderr, "Error: syntax error on line %lu, line must start with a directive (skipping this line)\n", line_number);

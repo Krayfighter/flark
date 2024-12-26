@@ -67,4 +67,4 @@ Jump:20.0;
 
 // Default abyss height
 
-Abyss:300.0;
+Abyss:-300.0;

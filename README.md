@@ -129,8 +129,9 @@ or
 
 
 Firstly, the shape of a platform is described by x, y, width and height. It is
-Important to note that the y axis grows downward which is normal for screen
-coordinates, but may be counterintuitive at first.
+Important to note that the height of all objects grows downards since the world
+is in screen coordinates. In the level file format, the y coordinates are inverted
+so that positive y goes upwards for convenience.
 
 \<platform definition\>x\<int\>;y\<int\>;w\<int\>;h\<int\>;
 
