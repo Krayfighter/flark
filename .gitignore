@@ -10,4 +10,6 @@ raylib/
 .zig-cache
 build/
 
+package_win32.sh
+
 
