@@ -1,0 +1,7 @@
+
+vgcore*
+main.bin
+gmon.out
+flark
+.zig-cache
+

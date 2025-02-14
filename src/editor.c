@@ -1,0 +1,326 @@
+
+#include "stdint.h"
+#include "stdio.h"
+#include "errno.h"
+#include <SDL3/SDL_events.h>
+
+#define __USE_POSIX199309
+#include "time.h"
+
+#include "pt_error.h"
+
+#include "editor.h"
+
+
+PlatformType platform_type;
+PlatformSelectAction select_type;
+Tab current_tab;
+
+const char *normal_platform_text = "Normal Block";
+const char *spring_platform_text = "Spring";
+const char *slime_platform_text = "Bouncy Slime";
+const char *killer_platform_text = "Killer Block";
+
+const char *select_move_text = "Move";
+const char *select_delete_text = "Delete";
+
+const char *platform_tab_text = "Platforms";
+const char *select_tab_text = "Select";
+
+#define point_in_rect(point, rect) \
+point.x >= rect->x && point.x <= (rect->x + rect->w) && \
+point.y >= rect->y && point.y <= (rect->y + rect->h)
+
+bool select_level_item(
+  Vec2 coords, // world woords
+  Camera *cam, Level *level,
+  PlatformType *type, uint32_t *index
+) {
+  *type = PLATFORM_BLOCK;
+  Rect *item;
+  for (uint16_t i = 0; i < level->normal_block.item_count; i += 1) {
+    item = level->normal_block.items + i;
+    if (point_in_rect(coords, item)) { *index = i; return true; }
+  }
+  *type = PLATFORM_SPRING;
+  for (uint16_t i = 0; i < level->spring.item_count; i += 1) {
+    item = level->spring.items + i;
+    if (point_in_rect(coords, item)) { *index = i; return true; }
+  }
+  *type = PLATFORM_SLIME;
+  for (uint16_t i = 0; i < level->slime.item_count; i += 1) {
+    item = level->slime.items + i;
+    if (point_in_rect(coords, item)) { *index = i; return true; }
+  }
+  *type = PLATFORM_KILL;
+  for (uint16_t i = 0; i < level->kill_block.item_count; i += 1) {
+    item = level->kill_block.items + i;
+    if (point_in_rect(coords, item)) { *index = i; return true; }
+  }
+  return false;
+}
+
+Vec2 mouse_world_coords(Camera *cam) {
+  float mouse_x, mouse_y;
+  SDL_GetMouseState(&mouse_x, &mouse_y);
+  return Camera_to_world_coords(cam, mouse_x, mouse_y);
+}
+
+EditorResult run_editor_loop(
+  SDL_Window *window,
+  SDL_Renderer *renderer,
+  Player *player,
+  Level *level,
+  Camera *cam
+) {
+  Tab selected_tab = 0x00;
+  PlatformSelectAction selected_action = 0x00;
+  PlatformType selected_platform = 0x00;
+
+  bool entering_platform = false;
+  Vec2 new_platform_start = (Vec2){ 0 };
+
+  Rect *moving_platform = NULL;
+
+
+  while (true) {
+
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+      switch (event.type) {
+        case SDL_EVENT_QUIT: return EDITOR_RESULT_QUIT;
+        case SDL_EVENT_MOUSE_BUTTON_DOWN: {
+          if (selected_tab == TAB_PLATFORM) {
+            Vec2 world_coords = Camera_to_world_coords(cam, event.button.x, event.button.y);
+            if (!entering_platform) {
+              new_platform_start = world_coords;
+              entering_platform = true;
+            }else {
+              Rect new_rect = Rect_from_points(new_platform_start, world_coords);
+              switch (selected_platform) {
+                case PLATFORM_BLOCK: List_Rect_push(&level->normal_block, new_rect); break;
+                case PLATFORM_SPRING: List_Rect_push(&level->spring, new_rect); break;
+                case PLATFORM_SLIME: List_Rect_push(&level->slime, new_rect); break;
+                case PLATFORM_KILL: List_Rect_push(&level->kill_block, new_rect); break;
+                case PLATFORM_MAX: {};
+              }
+              entering_platform = false;
+            }
+          }
+          else if (selected_tab == TAB_SELECT) {
+            Vec2 coords = mouse_world_coords(cam);
+            if (moving_platform == NULL) {
+              PlatformType type;
+              uint32_t index;
+              if (select_level_item(coords, cam, level, &type, &index)) {
+                switch (selected_action) {
+                  case SELECT_MOVE: {
+                    switch (type) {
+                      case PLATFORM_BLOCK: moving_platform = level->normal_block.items + index; break;
+                      case PLATFORM_SPRING: moving_platform = level->spring.items + index; break;
+                      case PLATFORM_SLIME: moving_platform = level->slime.items + index; break;
+                      case PLATFORM_KILL: moving_platform = level->kill_block.items + index; break;
+                      case PLATFORM_MAX: {};
+                    }
+                  }; break;
+                  case SELECT_DELETE: {
+                    switch (type) {
+                      case PLATFORM_BLOCK: List_Rect_swapback_delete(&level->normal_block, index); break;
+                      case PLATFORM_SPRING: List_Rect_swapback_delete(&level->spring, index); break;
+                      case PLATFORM_SLIME: List_Rect_swapback_delete(&level->slime, index); break;
+                      case PLATFORM_KILL: List_Rect_swapback_delete(&level->kill_block, index); break;
+                      case PLATFORM_MAX: {};
+                    }
+                    // List_Rect_swapback_delete(&level->normal_block, index);
+                  }; break;
+                  case SELECT_MAX: {};
+                }
+              }
+            }else { moving_platform = NULL; }
+          }
+        } break;
+        case SDL_EVENT_KEY_DOWN: register_sdl_keydown(event.key); break;
+        case SDL_EVENT_KEY_UP: register_sdl_keyup(event.key); break;
+      }
+    }
+
+    if (keys_pressed(KEY_SWITCH_MODE)) {
+      consume_keys(KEY_SWITCH_MODE);
+      player->velocity = (Vec2){ 0.0, 0.0 };
+      return EDITOR_RESULT_OK;
+    }
+    if (keys_pressed(KEY_LOAD_FILE)) {
+      consume_keys(KEY_LOAD_FILE);
+      if (keys_down(KEY_SHIFT)) {
+        Level_free(*level);
+        *level = Level_load_from_file(level_filename);
+        expect((level->normal_block.items != NULL), "Failed to load level from file");
+      } else {
+        Level_save_to_file(level, level_filename);
+      }
+    }
+    // switch selection
+    if (keys_pressed(KEY_SPACE)) {
+      consume_keys(KEY_SPACE);
+      if (selected_tab == TAB_PLATFORM) {
+        if (keys_down(KEY_SHIFT)) {
+          if (selected_platform > 0) { selected_platform -= 1; }
+          else { selected_platform = PLATFORM_MAX - 1; }
+        }else {
+          selected_platform += 1;
+          if (selected_platform == PLATFORM_MAX) { selected_platform = 0; }
+          // if (selected_platform < PLATFORM_MAX) { selected_platform += 1; }
+          // else { selected_action = 0; }
+        }
+      }else if (selected_tab == TAB_SELECT) {
+        selected_action += 1;
+        if (selected_action == SELECT_MAX) { selected_action = 0x00; }
+      }
+      else { panic("Failed to handle tab variant", EXIT_FAILURE); }
+    }
+    zoom_camera(cam);
+
+    //  Movement
+    Direction move_dir = KeyState_get_input_direction();
+    float move_speed = 4.0;
+    if (keys_down(KEY_SHIFT)) { move_speed *= 2.0; }
+    if (keys_pressed(KEY_TAB)) {
+      consume_keys(KEY_TAB);
+      if (selected_tab == TAB_SELECT) { selected_tab = TAB_PLATFORM; }
+      else if (selected_tab == TAB_PLATFORM) { selected_tab = TAB_SELECT; }
+      selected_action = 0x00;
+    }
+    if (move_dir & DIR_UP)    { player->body.y -= move_speed; }
+    if (move_dir & DIR_DOWN)  { player->body.y += move_speed; }
+    if (move_dir & DIR_LEFT)  { player->body.x -= move_speed; }
+    if (move_dir & DIR_RIGHT) { player->body.x += move_speed; }
+
+    if (moving_platform != NULL) {
+      Vec2 coords = mouse_world_coords(cam);
+      moving_platform->x = coords.x;
+      moving_platform->y = coords.y;
+      // moving_platform = NULL;
+    }
+
+    // Render
+    Camera_update_focus_and_window_size(
+      cam, window, (Vec2){ .x = player->body.x, .y = player->body.y }
+    );
+
+    SetRenderDrawColor_uint32(renderer, CLEAR_COLOR);
+    SDL_RenderClear(renderer);
+
+    Camera_render_level(cam, renderer, level);
+
+    SDL_SetRenderDrawColor(renderer, 0xcc, 0x00, 0x88, 0xff);
+    Camera_render_rects(cam, renderer, NULL, NULL, &player->body, 1, false);
+
+    render_text(renderer, &font, "Edit Mode   Press E to play", 5.0, 5.0, 15.0, 0xffffff00);
+
+    const uint32_t normal_text_color = 0x88888800;
+    const uint32_t selected_text_color = 0xcccccc00;
+
+    uint32_t text_color;
+
+    // #define text_color(plat_type) (selected_action == plat_type) ? selected_text_color : normal_text_color
+    #define print_text(text, y) render_text(renderer, &font, text, 5.0, y, 10.0, text_color)
+
+    if (selected_tab == TAB_PLATFORM) {
+      // text_color = text_color(PLATFORM_BLOCK);
+      text_color = (selected_platform == PLATFORM_BLOCK)
+        ? selected_text_color
+        : normal_text_color;
+      print_text(normal_platform_text, 125.0);
+
+      // text_color = text_color(PLATFORM_SPRING);
+      text_color = (selected_platform == PLATFORM_SPRING)
+        ? selected_text_color
+        : normal_text_color;
+      print_text(spring_platform_text, 140.0);
+
+      // text_color = text_color(PLATFORM_SLIME);
+      text_color = (selected_platform == PLATFORM_SLIME)
+        ? selected_text_color
+        : normal_text_color;
+      print_text(slime_platform_text, 155.0);
+
+      // text_color = text_color(PLATFORM_KILL);
+      text_color = (selected_platform == PLATFORM_KILL)
+        ? selected_text_color
+        : normal_text_color;
+      print_text(killer_platform_text, 170.0);
+
+    } else if (selected_tab == TAB_SELECT) {
+      // text_color = text_color(SELECT_MOVE);
+      text_color = (selected_action == SELECT_MOVE)
+        ? selected_text_color
+        : normal_text_color;
+      print_text(select_move_text, 125.0);
+
+      // text_color = text_color(SELECT_DELETE);
+      text_color = (selected_action == SELECT_DELETE)
+        ? selected_text_color
+        : normal_text_color;
+      print_text(select_delete_text, 140.0);
+    } else { panic("Unhandled tab variant", EXIT_FAILURE); }
+
+    float win_height = (float)cam->render_height;
+    SDL_SetRenderDrawColor( renderer, 0x66, 0x66, 0x66, 0xff );
+    SDL_RenderFillRect(renderer, &(Rect) {
+      .x = 0.0, .y = win_height - 20.0,
+      .w = (float)cam->render_width, .h = 20.0
+    });
+
+    SDL_SetRenderDrawColor(renderer, 0x22, 0x22, 0x22, 0xff);
+
+    float offset = 5.0;
+    // text_color = (selected_edit_tab == TAB_PLATFORM) ? selected_text_color : normal_text_color;
+    if (selected_tab == TAB_PLATFORM) {
+      SDL_RenderFillRect(renderer, &(Rect){
+        .x = offset, .y = win_height - 20.0,
+        .w = text_width(platform_tab_text, 10.0), .h = 20.0
+      } );
+    }
+    render_text(renderer, &font, platform_tab_text, offset, win_height - 15.0, 10.0, 0xffffff00);
+
+    offset += text_width(platform_tab_text, 10.0) + 5.0;
+
+    if (selected_tab == TAB_SELECT) {
+      SDL_RenderFillRect(renderer, &(Rect){
+        .x = offset, .y = win_height - 20.0,
+        .w = text_width(select_tab_text, 10.0), .h = 20.0
+      });
+    }
+    render_text(renderer, &font, select_tab_text, offset, win_height - 15.0, 10.0, 0xffffff00);
+
+    SDL_SetRenderDrawColor(renderer, 0xff, 0xff, 0xff, 0xff);
+    Rect trect = Camera_convert_rect(cam, (Rect){ .x = level->home.x, .y = level->home.y, .w = 0.0, .h = 0.0 });
+    SDL_RenderLine(renderer, trect.x - 10.0, trect.y, trect.x + 10.0, trect.y);
+    SDL_RenderLine(renderer, trect.x, trect.y - 10.0, trect.x, trect.y + 10.0);
+    // SDL_RenderFillRect(renderer, &trect);
+
+    if (entering_platform) {
+      float mouse_x, mouse_y;
+      SDL_GetMouseState(&mouse_x, &mouse_y);
+
+      SDL_SetRenderDrawColor(renderer, 0xe0, 0xe0, 0xff, 0xff);
+      Vec2 mouse_world_coords = Camera_to_world_coords(cam, mouse_x, mouse_y);
+      Rect tmp_rect = Rect_from_points(new_platform_start, mouse_world_coords);
+
+      Camera_render_rects(cam ,renderer, NULL, NULL, &tmp_rect, 1, false);
+    }
+
+    // SDL_SetRenderDrawColor(renderer, 0x88, 0x00, 0xff, 0xff);
+    SDL_RenderPresent(renderer);
+
+    nanosleep( &(struct timespec){ .tv_sec = 0, .tv_nsec = 1000000 * 12}, NULL );
+  }
+  // uint32_t win_w, win_h = SDL_GetWindowSize(window, (int *)&win_w, (int *)&win_h);
+  // cam->render_width = win_w;
+  // cam->render_height = win_h;
+  // cam->focus = (Vec2){ .x = player->body.x, .y = player->body.y };
+
+  // SDL_SetRenderDrawColor
+}
+
+
