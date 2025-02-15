@@ -226,9 +226,16 @@ EditorResult run_editor_loop(
     if (keys_pressed(KEY_LOAD_FILE)) {
       consume_keys(KEY_LOAD_FILE);
       if (keys_down(KEY_SHIFT)) {
-        Level_free(*level);
-        *level = Level_load_from_file(level_filename);
-        expect((level->normal_block.items != NULL), "Failed to load level from file");
+        // Level_free(*level);
+        Level new_level = Level_load_from_file(level_filename);
+        if (new_level.normal_block.items == NULL) {
+          // TODO add error screen
+          fprintf(stderr, "WARN: failed to load level, doing nothing\n");
+        }else {
+          Level_free(*level);
+          *level = new_level;
+        }
+        // expect((level->normal_block.items != NULL), "Failed to load level from file");
       } else {
         run_menu_save_level_to_file(renderer, cam, level);
         // Level_save_to_file(level, level_filename);
