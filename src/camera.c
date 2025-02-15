@@ -20,7 +20,6 @@ void precompute_camera_vectors(
 ) {
   *camera_scale = (float)(cam->render_width) / cam->view_width;
   *height_ratio = (float)(cam->render_height) / (float)(cam->render_width);
-  // float view_height = (float)
   *camera_offset = (Vec2){
     .x = -cam->focus.x + (cam->view_width / 2.0),
     .y = -cam->focus.y + ((cam->view_width * *height_ratio) / 2.0)
@@ -67,7 +66,6 @@ void Camera_render_rects(
     Rect trect = Camera_convert_rect_precalc(self, rects[i], camera_scale, height_ratio, camera_offset);
 
     if (texture != NULL) {
-      // SDL_RenderTexture(renderer, texture, texture_view, &trect);
       const float TEXTURE_WIDTH = 100.0;
       const float TEXTURE_HEIGHT = 100.0;
       if (tiled) {
@@ -90,7 +88,7 @@ void Camera_render_rects(
 Vec2 Camera_to_world_coords(Camera *self, float screen_x, float screen_y) {
   float world_scale = self->view_width / (float)(self->render_width);
   float view_height = self->view_width * (float)(self->render_height) / (float)(self->render_width);
-  // float world_x = screen_x * world_scale - (self->view_width / 2.0);
+
   float world_x = self->focus.x + (screen_x * world_scale) - (self->view_width / 2.0);
   float world_y = self->focus.y + (screen_y * world_scale) - (view_height / 2.0);
 
@@ -110,7 +108,6 @@ void Camera_render_level(
   Camera *self,
   SDL_Renderer *renderer,
   Level *level
-  // SDL_Window *window
 ) {
   
   Rect view_rect = (Rect){ .x = 0.0, .y = 0.0, .w = solid_block_texture->w, .h = solid_block_texture->h };
@@ -123,15 +120,13 @@ void Camera_render_level(
 }
 
 void zoom_camera(Camera *cam) {
-  if (keys_pressed(KEY_ZOOM_OUT)) {
-    consume_keys(KEY_ZOOM_OUT);
-    cam->view_width /= 1.5;
+  if (keys_down(KEY_ZOOM_OUT)) {
+    cam->view_width /= 1.025;
     cam->view_width = (cam->view_width >= CAMERA_VIEW_SIZE_MIN)
       ? cam->view_width : CAMERA_VIEW_SIZE_MIN;
   }
-  if (keys_pressed(KEY_ZOOM_IN)) {
-    consume_keys(KEY_ZOOM_IN);
-    cam->view_width *= 1.5;
+  if (keys_down(KEY_ZOOM_IN)) {
+    cam->view_width *= 1.025;
     cam->view_width = (cam->view_width <= CAMERA_VIEW_SIZE_MAX)
       ? cam->view_width : CAMERA_VIEW_SIZE_MAX;
   }

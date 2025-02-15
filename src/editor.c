@@ -66,6 +66,76 @@ Vec2 mouse_world_coords(Camera *cam) {
   return Camera_to_world_coords(cam, mouse_x, mouse_y);
 }
 
+void run_menu_save_level_to_file(
+  SDL_Renderer *renderer,
+  Camera *cam,
+  Level *level
+) {
+  SDL_Event event;
+  while (true) {
+    while (SDL_PollEvent(&event)) {
+      switch (event.type) {
+        case SDL_EVENT_KEY_DOWN: register_sdl_keydown(event.key); break;
+        case SDL_EVENT_KEY_UP: register_sdl_keyup(event.key); break;
+        default: {};
+      }
+    }
+
+    if (keys_pressed(KEY_CONFIRM)) {
+      consume_keys(KEY_CONFIRM);
+      Level_save_to_file(level, level_filename);
+      return;
+    }
+    if (keys_pressed(KEY_CANCEL)) {
+      consume_keys(KEY_CANCEL);
+      return;
+    }
+
+    float s_width = (float)cam->render_width;
+    float s_height = (float)cam->render_height;
+
+    float menu_width = s_width * 0.8;
+    float menu_height = s_height * 0.8;
+    float offset_x = (s_width - menu_width) / 2.0;
+    float offset_y = (s_height - menu_height) / 2.0;
+
+    Rect menu_rect = (Rect){ .x = offset_x, .y = offset_y, .w = menu_width, .h = menu_height };
+
+    SDL_SetRenderDrawColor(renderer, 0x20, 0x20, 0x20, 0xff);
+    SDL_RenderFillRect(renderer, &menu_rect);
+    SDL_SetRenderDrawColor(renderer, 0x40, 0x40, 0x40, 0xff);
+    SDL_RenderRect(renderer, &menu_rect);
+
+    const char *prompt_text = "Would you like to save over file";
+    const char *instruction_text = "Enter to confirm   Escape to cancel";
+
+    float font_size = 15.0;
+
+    float prompt_text_size = text_width(prompt_text, font_size);
+    float instruction_text_size = text_width(instruction_text, font_size);
+
+    float prompt_text_offset_x = (s_width - prompt_text_size) / 2.0;
+    float instruction_text_offset_x = (s_width - instruction_text_size) / 2.0;
+    
+    float prompt_text_offset_y = (s_height / 2.0) - font_size;
+    float instruction_text_offset_y = prompt_text_offset_y + font_size + 5.0;
+
+    render_text(renderer, &font, prompt_text, prompt_text_offset_x, prompt_text_offset_y, font_size, 0xffffff00);
+    render_text(
+      renderer, &font,
+      instruction_text, instruction_text_offset_x, instruction_text_offset_y,
+      font_size, 0xaaaaaa00
+    );
+
+    SDL_RenderPresent(renderer);
+
+    nanosleep(
+      &(struct timespec){ .tv_sec = 0, .tv_nsec = 1000 * 1000 * 20 },
+      NULL
+    );
+  }
+}
+
 EditorResult run_editor_loop(
   SDL_Window *window,
   SDL_Renderer *renderer,
@@ -149,6 +219,10 @@ EditorResult run_editor_loop(
       player->velocity = (Vec2){ 0.0, 0.0 };
       return EDITOR_RESULT_OK;
     }
+    if (keys_pressed(KEY_CANCEL)) {
+      consume_keys(KEY_CANCEL);
+      return EDITOR_RESULT_QUIT;
+    }
     if (keys_pressed(KEY_LOAD_FILE)) {
       consume_keys(KEY_LOAD_FILE);
       if (keys_down(KEY_SHIFT)) {
@@ -156,7 +230,8 @@ EditorResult run_editor_loop(
         *level = Level_load_from_file(level_filename);
         expect((level->normal_block.items != NULL), "Failed to load level from file");
       } else {
-        Level_save_to_file(level, level_filename);
+        run_menu_save_level_to_file(renderer, cam, level);
+        // Level_save_to_file(level, level_filename);
       }
     }
     // switch selection

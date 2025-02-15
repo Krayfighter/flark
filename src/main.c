@@ -96,6 +96,10 @@ int main() {
         case EDITOR_RESULT_QUIT: goto APP_QUIT;
       }
     }
+    if (keys_pressed(KEY_CANCEL)) {
+      consume_keys(KEY_CANCEL);
+      goto APP_QUIT;
+    }
     zoom_camera(&cam);
 
     // Physics / Movement

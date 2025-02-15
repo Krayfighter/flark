@@ -18,6 +18,8 @@ typedef enum: uint32_t {
   KEY_ZOOM_IN     = 1 << 8,
   KEY_ZOOM_OUT    = 1 << 9,
   KEY_LOAD_FILE   = 1 << 10,
+  KEY_CONFIRM     = 1 << 11,
+  KEY_CANCEL      = 1 << 12,
 } KeyFlag;
 
 typedef struct {

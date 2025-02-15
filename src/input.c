@@ -16,6 +16,8 @@ void register_sdl_keydown(SDL_KeyboardEvent key) {
     case SDL_SCANCODE_LSHIFT: set_keys_pressed(KEY_SHIFT); break;
     case SDL_SCANCODE_PAGEDOWN: set_keys_pressed(KEY_ZOOM_IN); break;
     case SDL_SCANCODE_PAGEUP: set_keys_pressed(KEY_ZOOM_OUT); break;
+    case SDL_SCANCODE_RETURN: set_keys_pressed(KEY_CONFIRM); break;
+    case SDL_SCANCODE_ESCAPE: set_keys_pressed(KEY_CANCEL); break;
     default: {}
   }
 }
@@ -33,6 +35,8 @@ void register_sdl_keyup(SDL_KeyboardEvent key) {
     case SDL_SCANCODE_LSHIFT: set_keys_released(KEY_SHIFT); break;
     case SDL_SCANCODE_PAGEDOWN: set_keys_released(KEY_ZOOM_IN); break;
     case SDL_SCANCODE_PAGEUP: set_keys_released(KEY_ZOOM_OUT); break;
+    case SDL_SCANCODE_RETURN: set_keys_released(KEY_CONFIRM); break;
+    case SDL_SCANCODE_ESCAPE: set_keys_released(KEY_CANCEL); break;
     default: {}
   }
 }
