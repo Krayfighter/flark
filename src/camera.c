@@ -124,11 +124,13 @@ void Camera_render_level(
 
 void zoom_camera(Camera *cam) {
   if (keys_pressed(KEY_ZOOM_OUT)) {
+    consume_keys(KEY_ZOOM_OUT);
     cam->view_width /= 1.5;
     cam->view_width = (cam->view_width >= CAMERA_VIEW_SIZE_MIN)
       ? cam->view_width : CAMERA_VIEW_SIZE_MIN;
   }
-  if (keys_pressed(KEY_ZOOM_OUT)) {
+  if (keys_pressed(KEY_ZOOM_IN)) {
+    consume_keys(KEY_ZOOM_IN);
     cam->view_width *= 1.5;
     cam->view_width = (cam->view_width <= CAMERA_VIEW_SIZE_MAX)
       ? cam->view_width : CAMERA_VIEW_SIZE_MAX;
