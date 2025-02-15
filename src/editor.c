@@ -2,6 +2,8 @@
 #include "stdint.h"
 #include "stdio.h"
 #include "errno.h"
+#include "math.h"
+
 #include <SDL3/SDL_events.h>
 
 #define __USE_POSIX199309
@@ -31,33 +33,50 @@ const char *select_tab_text = "Select";
 point.x >= rect->x && point.x <= (rect->x + rect->w) && \
 point.y >= rect->y && point.y <= (rect->y + rect->h)
 
-bool select_level_item(
+typedef enum: uint8_t {
+  SELECT_NONE = 0,
+  SELECT_PLATFORM,
+  SELECT_ABYSS,
+  SELECT_HOME,
+} SelectType;
+
+SelectType select_level_item(
   Vec2 coords, // world woords
   Camera *cam, Level *level,
-  PlatformType *type, uint32_t *index
+  uint8_t *type, uint32_t *index
 ) {
   *type = PLATFORM_BLOCK;
   Rect *item;
   for (uint16_t i = 0; i < level->normal_block.item_count; i += 1) {
     item = level->normal_block.items + i;
-    if (point_in_rect(coords, item)) { *index = i; return true; }
+    if (point_in_rect(coords, item)) { *index = i; return SELECT_PLATFORM; }
   }
   *type = PLATFORM_SPRING;
   for (uint16_t i = 0; i < level->spring.item_count; i += 1) {
     item = level->spring.items + i;
-    if (point_in_rect(coords, item)) { *index = i; return true; }
+    if (point_in_rect(coords, item)) { *index = i; return SELECT_PLATFORM; }
   }
   *type = PLATFORM_SLIME;
   for (uint16_t i = 0; i < level->slime.item_count; i += 1) {
     item = level->slime.items + i;
-    if (point_in_rect(coords, item)) { *index = i; return true; }
+    if (point_in_rect(coords, item)) { *index = i; return SELECT_PLATFORM; }
   }
   *type = PLATFORM_KILL;
   for (uint16_t i = 0; i < level->kill_block.item_count; i += 1) {
     item = level->kill_block.items + i;
-    if (point_in_rect(coords, item)) { *index = i; return true; }
+    if (point_in_rect(coords, item)) { *index = i; return SELECT_PLATFORM; }
   }
-  return false;
+  if (fabsf(coords.y - level->abyss) < 5.0) {
+    return SELECT_ABYSS;
+  }
+  float dx, dy;
+  dx = coords.x - level->home.x;
+  dy = coords.y - level->home.y;
+  // no square root needed after squaring both sides :)
+  if ( (dx*dx) + (dy*dy) < 25.0 ) {
+    return SELECT_HOME;
+  }
+  return SELECT_NONE;
 }
 
 Vec2 mouse_world_coords(Camera *cam) {
@@ -150,7 +169,8 @@ EditorResult run_editor_loop(
   bool entering_platform = false;
   Vec2 new_platform_start = (Vec2){ 0 };
 
-  Rect *moving_platform = NULL;
+  SelectType selection_type = SELECT_NONE;
+  void *selected_item = NULL;
 
 
   while (true) {
@@ -179,17 +199,18 @@ EditorResult run_editor_loop(
           }
           else if (selected_tab == TAB_SELECT) {
             Vec2 coords = mouse_world_coords(cam);
-            if (moving_platform == NULL) {
+            if (selected_item == NULL) {
               PlatformType type;
               uint32_t index;
-              if (select_level_item(coords, cam, level, &type, &index)) {
+              selection_type = select_level_item(coords, cam, level, &type, &index);
+              if (selection_type == SELECT_PLATFORM) {
                 switch (selected_action) {
                   case SELECT_MOVE: {
                     switch (type) {
-                      case PLATFORM_BLOCK: moving_platform = level->normal_block.items + index; break;
-                      case PLATFORM_SPRING: moving_platform = level->spring.items + index; break;
-                      case PLATFORM_SLIME: moving_platform = level->slime.items + index; break;
-                      case PLATFORM_KILL: moving_platform = level->kill_block.items + index; break;
+                      case PLATFORM_BLOCK: selected_item = level->normal_block.items + index; break;
+                      case PLATFORM_SPRING: selected_item = level->spring.items + index; break;
+                      case PLATFORM_SLIME: selected_item = level->slime.items + index; break;
+                      case PLATFORM_KILL: selected_item = level->kill_block.items + index; break;
                       case PLATFORM_MAX: {};
                     }
                   }; break;
@@ -205,8 +226,12 @@ EditorResult run_editor_loop(
                   }; break;
                   case SELECT_MAX: {};
                 }
+              }else if (selection_type == SELECT_ABYSS) {
+                selected_item = &level->abyss;
+              }else if (selection_type == SELECT_HOME) {
+                selected_item = &level->home;
               }
-            }else { moving_platform = NULL; }
+            }else { selected_item = NULL; }
           }
         } break;
         case SDL_EVENT_KEY_DOWN: register_sdl_keydown(event.key); break;
@@ -223,8 +248,8 @@ EditorResult run_editor_loop(
       consume_keys(KEY_CANCEL);
       if (entering_platform) {
         entering_platform = false;
-      }else if (moving_platform != NULL) {
-        moving_platform = NULL;
+      }else if (selected_item != NULL) {
+        selected_item = NULL;
       }else {
         return EDITOR_RESULT_QUIT;
       }
@@ -283,10 +308,21 @@ EditorResult run_editor_loop(
     if (move_dir & DIR_LEFT)  { player->body.x -= move_speed; }
     if (move_dir & DIR_RIGHT) { player->body.x += move_speed; }
 
-    if (moving_platform != NULL) {
+    if (selected_item != NULL) {
       Vec2 coords = mouse_world_coords(cam);
-      moving_platform->x = coords.x;
-      moving_platform->y = coords.y;
+      switch (selection_type) {
+        case SELECT_PLATFORM: {
+          ((Rect *)selected_item)->x = coords.x;
+          ((Rect *)selected_item)->y = coords.y;
+        }; break;
+        case SELECT_ABYSS: {
+          *((float *)selected_item) = coords.y;
+        }; break;
+        case SELECT_HOME: {
+          *((Vec2 *)selected_item) = coords;
+        }; break;
+        default: panic("Invalid selection type while item is selected", EXIT_FAILURE);
+      }
       // moving_platform = NULL;
     }
 
@@ -382,9 +418,13 @@ EditorResult run_editor_loop(
     render_text(renderer, &font, select_tab_text, offset, win_height - 15.0, 10.0, 0xffffff00);
 
     SDL_SetRenderDrawColor(renderer, 0xff, 0xff, 0xff, 0xff);
+
     Rect trect = Camera_convert_rect(cam, (Rect){ .x = level->home.x, .y = level->home.y, .w = 0.0, .h = 0.0 });
     SDL_RenderLine(renderer, trect.x - 10.0, trect.y, trect.x + 10.0, trect.y);
     SDL_RenderLine(renderer, trect.x, trect.y - 10.0, trect.x, trect.y + 10.0);
+
+    trect = Camera_convert_rect(cam, (Rect){ .x = 0.0, .y = level->abyss, .w = 0.0, .h = 0.0 });
+    SDL_RenderLine(renderer, 0.0, trect.y, (float)cam->render_width, trect.y);
     // SDL_RenderFillRect(renderer, &trect);
 
     if (entering_platform) {
