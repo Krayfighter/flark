@@ -221,7 +221,13 @@ EditorResult run_editor_loop(
     }
     if (keys_pressed(KEY_CANCEL)) {
       consume_keys(KEY_CANCEL);
-      return EDITOR_RESULT_QUIT;
+      if (entering_platform) {
+        entering_platform = false;
+      }else if (moving_platform != NULL) {
+        moving_platform = NULL;
+      }else {
+        return EDITOR_RESULT_QUIT;
+      }
     }
     if (keys_pressed(KEY_LOAD_FILE)) {
       consume_keys(KEY_LOAD_FILE);
